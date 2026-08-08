@@ -1,0 +1,29 @@
+# Configuração de deploy da Netlify.
+# Com isso, ao conectar o repositório na Netlify, ela já sabe como buildar e
+# servir o app — você não precisa preencher nada manualmente.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA: qualquer rota do app (React Router) cai no index.html.
+# A Netlify serve os arquivos reais (sw.js, /assets/*, manifest) antes de
+# aplicar este redirect, então o Service Worker e os ícones continuam OK.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# O Service Worker não deve ser cacheado, para atualizações chegarem na hora.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache"
