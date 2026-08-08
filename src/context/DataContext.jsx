@@ -91,6 +91,27 @@ export function DataProvider({ children }) {
         const seed = buildSeed()
         setDb(seed)
       },
+      // Zera os dados operacionais para uso real, mantendo login (users),
+      // serviços/categorias (comissões) e configurações da barbearia.
+      startFresh: () => {
+        setDb((prev) => ({
+          ...prev,
+          transactions: [],
+          appointments: [],
+          queue: [],
+          expenses: [],
+          goals: [],
+          cashSessions: [],
+          daysOff: [],
+          gallery: [],
+          clients: [],
+          users: prev.users.map((u) => ({ ...u, lastVisit: undefined })),
+        }))
+        // limpa o histórico de notificações já enviadas
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith('barber.notif'))
+          .forEach((k) => localStorage.removeItem(k))
+      },
       // selectors
       barbers: db.users.filter((u) => u.role === 'barber' || u.role === 'owner'),
       onlyBarbers: db.users.filter((u) => u.role === 'barber'),

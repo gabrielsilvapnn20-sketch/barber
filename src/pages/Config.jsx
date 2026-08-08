@@ -9,7 +9,7 @@ import Icon from '../components/Icons.jsx'
 import { showLocalNotification } from '../lib/notifications.js'
 
 export default function Config() {
-  const { db, setDb, resetData, patch } = useData()
+  const { db, setDb, resetData, startFresh, patch } = useData()
   const { theme, toggle } = useTheme()
   const { user } = useAuth()
   const toast = useToast()
@@ -157,9 +157,33 @@ export default function Config() {
           </p>
         </div>
 
+        <div className="card lg:col-span-2 border-emerald-200 dark:border-emerald-900/50">
+          <h3 className="mb-1 font-bold text-emerald-600 dark:text-emerald-400">Começar do zero (uso real)</h3>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Apaga os dados de demonstração — <b>faturamento, agendamentos, despesas, fila,
+            caixa, metas, folgas, portfólio e clientes</b> — e deixa o app limpo para o uso
+            real. <b>Mantém</b> seu login, a equipe e os serviços/comissões já cadastrados.
+          </p>
+          <button
+            className="btn-primary !bg-emerald-500 hover:!bg-emerald-600"
+            onClick={() => {
+              if (confirm('Zerar os dados de demonstração para começar o uso real? A equipe e os serviços serão mantidos.')) {
+                startFresh()
+                toast.success('Tudo pronto! App zerado para o uso real.')
+              }
+            }}
+          >
+            <Icon.check size={16} /> Zerar e começar do zero
+          </button>
+          <p className="mt-3 text-xs text-slate-400">
+            Dica: depois disso, revise a <b>Equipe</b> (renomeie/adicione seus barbeiros) e os
+            <b> Serviços &amp; Comissões</b> com seus preços reais.
+          </p>
+        </div>
+
         <div className="card lg:col-span-2 border-red-200 dark:border-red-900/50">
           <h3 className="mb-1 font-bold text-red-600 dark:text-red-400">Zona de perigo</h3>
-          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">Restaura os dados de demonstração. Todos os lançamentos atuais serão perdidos.</p>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">Restaura os dados de demonstração (para voltar a treinar). Todos os lançamentos atuais serão perdidos.</p>
           <button
             className="btn-danger"
             onClick={() => {
