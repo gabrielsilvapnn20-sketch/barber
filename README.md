@@ -63,6 +63,52 @@ A tela de login lista os usuários de demonstração. Você também pode entrar 
 | Rafael Souza | Barbeiro | rafael@barbearia.com | 123456 | 2222 |
 | Bruno Lima | Barbeiro | bruno@barbearia.com | 123456 | 3333 |
 
+## 📲 Instalação (PWA) e Notificações
+
+O app é um **PWA instalável** e roda em **modo standalone** (tela cheia, sem barra do
+navegador). Ao abrir sem estar instalado, uma tela guia a instalação com passos por
+plataforma — a instalação é tratada como parte **obrigatória** da experiência.
+
+- **Manifest** (`display: standalone`, ícones 192/512 `any`+`maskable`, `shortcuts`) é
+  gerado pelo `vite-plugin-pwa` a partir do `vite.config.js`.
+- **Service Worker** customizado em `src/sw.js` (estratégia `injectManifest`): faz o
+  precache offline (Workbox) e trata `push`, `notificationclick` e mensagens da página.
+- Registrado em `src/main.jsx` via `virtual:pwa-register`.
+
+### Como instalar
+
+- **Android / Chrome / Edge:** botão “Instalar agora” (usa o evento `beforeinstallprompt`)
+  ou menu ⋮ → “Instalar aplicativo”.
+- **iPhone / iPad (Safari):** Compartilhar → **“Adicionar à Tela de Início”**.
+  ⚠️ No iOS, notificações só funcionam com o app **instalado** (iOS **16.4+**).
+
+### Notificações
+
+Dois modos, cobrindo os avisos pedidos (novo agendamento → barbeiro; caixa pendente → dono):
+
+| Modo | Precisa de servidor? | O que faz |
+|---|---|---|
+| **Locais** (ativo hoje) | Não | O `NotificationEngine` observa os dados e pede ao Service Worker para exibir uma notificação do SO (`showNotification`) — funciona no dispositivo com o app aberto/em segundo plano. |
+| **Web Push** (scaffolding) | Sim | Assina o navegador com a chave **VAPID** (`subscribeToPush`) e o `push` handler no SW exibe a notificação enviada pelo servidor — funciona com o app fechado / em outro aparelho. |
+
+Para **Web Push real** (envio pelo servidor):
+
+1. Gere seu par de chaves: `node scripts/gen-vapid.mjs`
+2. Coloque a **pública** em `VAPID_PUBLIC_KEY` (`src/lib/notifications.js`) e a **privada**
+   numa variável de ambiente no backend (nunca no repo).
+3. Guarde as `PushSubscription` dos usuários (ex.: tabela no Supabase) e envie os avisos
+   a partir de uma **Supabase Edge Function** usando a lib `web-push`:
+
+```ts
+// supabase/functions/send-push/index.ts (exemplo)
+import webpush from 'npm:web-push'
+webpush.setVapidDetails('mailto:voce@barbearia.com', Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!)
+// para cada subscription do destinatário:
+await webpush.sendNotification(subscription, JSON.stringify({
+  title: 'Novo agendamento 📅', body: 'João — Corte às 15:00', url: '/agenda',
+}))
+```
+
 ## 🎨 Tecnologia
 
 - **React + Vite + Tailwind CSS** — leve, rápido e moderno.

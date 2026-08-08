@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext.jsx'
 import Layout from './components/Layout.jsx'
+import InstallGate from './components/InstallGate.jsx'
+import NotificationEngine from './components/NotificationEngine.jsx'
 import Login from './pages/Login.jsx'
 import OwnerDashboard from './pages/OwnerDashboard.jsx'
 import BarberDashboard from './pages/BarberDashboard.jsx'
@@ -26,10 +28,19 @@ function OwnerOnly({ children }) {
 export default function App() {
   const { user, isOwner } = useAuth()
 
-  if (!user) return <Login />
+  if (!user)
+    return (
+      <>
+        <InstallGate />
+        <Login />
+      </>
+    )
 
   return (
-    <Layout>
+    <>
+      <InstallGate />
+      <NotificationEngine />
+      <Layout>
       <Routes>
         <Route path="/" element={isOwner ? <OwnerDashboard /> : <BarberDashboard />} />
         <Route path="/agenda" element={<Agenda />} />
@@ -50,6 +61,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Layout>
+      </Layout>
+    </>
   )
 }
