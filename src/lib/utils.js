@@ -3,6 +3,19 @@
 export const uid = (prefix = 'id') =>
   `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 
+// Um agendamento pode ter vários serviços (serviceIds). Mantém compatibilidade
+// com agendamentos antigos que tinham um único serviceId.
+export const serviceIdsOf = (appointment = {}) => {
+  if (Array.isArray(appointment.serviceIds) && appointment.serviceIds.length) return appointment.serviceIds
+  return appointment.serviceId ? [appointment.serviceId] : []
+}
+
+// Nomes dos serviços de um agendamento, dado o catálogo de serviços.
+export const serviceNamesOf = (appointment, services = []) =>
+  serviceIdsOf(appointment)
+    .map((id) => services.find((s) => s.id === id)?.name)
+    .filter(Boolean)
+
 export const brl = (v) =>
   (Number(v) || 0).toLocaleString('pt-BR', {
     style: 'currency',

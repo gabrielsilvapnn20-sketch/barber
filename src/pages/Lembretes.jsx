@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { PageHeader, Avatar, EmptyState } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { fmtDate, fmtDateTime } from '../lib/utils.js'
+import { fmtDate, fmtDateTime, serviceNamesOf } from '../lib/utils.js'
 
 export default function Lembretes() {
   const { db } = useData()
@@ -92,13 +92,13 @@ export default function Lembretes() {
             <div className="space-y-2">
               {upcoming.map((a) => {
                 const barber = db.users.find((u) => u.id === a.barberId)
-                const srv = db.services.find((s) => s.id === a.serviceId)
+                const svcNames = serviceNamesOf(a, db.services)
                 const client = db.clients.find((c) => c.id === a.clientId)
                 return (
                   <div key={a.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/50">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{a.clientName}</p>
-                      <p className="text-xs text-slate-400">{fmtDateTime(a.datetime)} · {srv?.name}</p>
+                      <p className="text-xs text-slate-400">{fmtDateTime(a.datetime)}{svcNames.length ? ` · ${svcNames.join(' + ')}` : ''}</p>
                     </div>
                     <Avatar name={barber?.name} color={barber?.color} size={28} />
                     {client?.phone && (

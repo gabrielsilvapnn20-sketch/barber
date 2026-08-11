@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
 import { useData } from '../context/DataContext.jsx'
 import Icon from './Icons.jsx'
+import Logo from './Logo.jsx'
 import { Avatar } from './ui.jsx'
 
 const ownerNav = [
@@ -84,7 +85,7 @@ export default function Layout({ children }) {
             <Icon.menu />
           </button>
           <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2 font-bold">
-            <img src="/logo.svg" alt="" className="h-7 w-7 shrink-0 rounded-md" />
+            <Logo alt="" className="h-7 w-7 shrink-0 rounded-md object-contain" />
             <span className="truncate">{db.settings?.shopName || 'João Victor Barbershop'}</span>
           </div>
           <button onClick={toggle} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -123,7 +124,7 @@ function Brand({ shopName, onClose }) {
   return (
     <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
       <div className="flex min-w-0 items-center gap-2.5">
-        <img src="/logo.svg" alt="" className="h-9 w-9 shrink-0 rounded-lg" />
+        <Logo alt="" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
         <div className="min-w-0 leading-tight">
           <p className="truncate text-sm font-extrabold">{shopName || 'João Victor Barbershop'}</p>
           <p className="text-[11px] text-slate-400">Gestão</p>

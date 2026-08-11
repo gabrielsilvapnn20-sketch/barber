@@ -3,7 +3,7 @@ import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { usePWA } from '../context/PWAContext.jsx'
 import { showLocalNotification } from '../lib/notifications.js'
-import { fmtDateTime, todayISO } from '../lib/utils.js'
+import { fmtDateTime, todayISO, serviceNamesOf } from '../lib/utils.js'
 
 /**
  * Dispara notificações do sistema operacional (não toasts) para eventos reais:
@@ -47,9 +47,9 @@ export default function NotificationEngine() {
     const fresh = mine.filter((a) => !seen.has(a.id))
     if (fresh.length && enabled) {
       for (const a of fresh) {
-        const srv = serviceById(a.serviceId)
+        const names = serviceNamesOf(a, db.services)
         showLocalNotification('Novo agendamento 📅', {
-          body: `${a.clientName} — ${srv?.name || 'serviço'} em ${fmtDateTime(a.datetime)}`,
+          body: `${a.clientName} — ${names.join(' + ') || 'serviço'} em ${fmtDateTime(a.datetime)}`,
           tag: `appt-${a.id}`,
           data: { url: '/agenda' },
         })
@@ -57,7 +57,7 @@ export default function NotificationEngine() {
     }
     // Atualiza o registro de vistos (mesmo sem permissão, para não acumular)
     localStorage.setItem(key, JSON.stringify(mine.map((a) => a.id)))
-  }, [db.appointments, user, enabled, serviceById])
+  }, [db.appointments, user, enabled, db.services])
 
   // ---- Caixa pendente de fechamento (apenas dono) ----
   useEffect(() => {

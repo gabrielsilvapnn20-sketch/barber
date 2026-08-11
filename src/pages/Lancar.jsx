@@ -46,15 +46,23 @@ export default function Lancar() {
     setClientId('')
   }
 
-  const grouped = useMemo(() => {
-    const map = {}
-    for (const s of availableServices) {
-      const cat = db.categories.find((c) => c.id === s.categoryId)
-      const key = cat?.name || 'Outros'
-      map[key] = map[key] || { type: cat?.type, items: [] }
-      map[key].items.push(s)
+  // Separa claramente em Serviços e Produtos; dentro de cada um, por categoria.
+  const sections = useMemo(() => {
+    const build = (type) => {
+      const cats = {}
+      for (const s of availableServices) {
+        const cat = db.categories.find((c) => c.id === s.categoryId)
+        if ((cat?.type || 'service') !== type) continue
+        const key = cat?.name || 'Outros'
+        cats[key] = cats[key] || []
+        cats[key].push(s)
+      }
+      return cats
     }
-    return map
+    return [
+      { type: 'service', label: 'Serviços', icon: 'scissors', cats: build('service') },
+      { type: 'product', label: 'Produtos', icon: 'tag', cats: build('product') },
+    ].filter((sec) => Object.keys(sec.cats).length > 0)
   }, [availableServices, db.categories])
 
   const todayMine = db.transactions
@@ -93,29 +101,37 @@ export default function Lancar() {
             </div>
           )}
 
-          {/* Service picker grouped by category */}
-          <label className="label">Serviço / Produto</label>
-          <div className="space-y-4">
-            {Object.entries(grouped).map(([catName, group]) => (
-              <div key={catName}>
-                <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-400">
-                  {group.type === 'product' ? <Icon.tag size={13} /> : <Icon.scissors size={13} />}
-                  {catName}
-                </p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {group.items.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setServiceId(s.id)}
-                      className={`rounded-xl border p-3 text-left transition ${
-                        serviceId === s.id
-                          ? 'border-brand-500 bg-brand-500/10'
-                          : 'border-slate-200 hover:border-brand-300 dark:border-slate-700'
-                      }`}
-                    >
-                      <p className="text-sm font-semibold leading-tight">{s.name}</p>
-                      <p className="mt-1 text-sm font-bold text-brand-500">{brl(s.price)}</p>
-                    </button>
+          {/* Seleção: Serviços e Produtos em seções separadas */}
+          <div className="space-y-5">
+            {sections.map((sec) => (
+              <div key={sec.type}>
+                <div className="mb-2 flex items-center gap-2 border-b border-slate-100 pb-1.5 dark:border-slate-800">
+                  <span className={sec.type === 'product' ? 'text-amber-500' : 'text-brand-500'}>
+                    {sec.type === 'product' ? <Icon.tag size={16} /> : <Icon.scissors size={16} />}
+                  </span>
+                  <h3 className="text-sm font-bold">{sec.label}</h3>
+                </div>
+                <div className="space-y-3">
+                  {Object.entries(sec.cats).map(([catName, items]) => (
+                    <div key={catName}>
+                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">{catName}</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        {items.map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() => setServiceId(s.id)}
+                            className={`rounded-xl border p-3 text-left transition ${
+                              serviceId === s.id
+                                ? 'border-brand-500 bg-brand-500/10'
+                                : 'border-slate-200 hover:border-brand-300 dark:border-slate-700'
+                            }`}
+                          >
+                            <p className="text-sm font-semibold leading-tight">{s.name}</p>
+                            <p className="mt-1 text-sm font-bold text-brand-500">{brl(s.price)}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

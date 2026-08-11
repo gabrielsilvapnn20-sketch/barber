@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import Icon from '../components/Icons.jsx'
+import Logo from '../components/Logo.jsx'
 import { Modal } from '../components/ui.jsx'
 
 export default function Login() {
@@ -50,10 +51,9 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center text-white">
-          <img
-            src="/logo.svg"
+          <Logo
             alt={db.settings?.shopName || 'João Victor Barbershop'}
-            className="mx-auto mb-3 h-28 w-28 rounded-full bg-white/5 shadow-lg shadow-black/40 ring-1 ring-white/10"
+            className="mx-auto mb-3 h-28 w-28 rounded-full bg-white/5 object-contain shadow-lg shadow-black/40 ring-1 ring-white/10"
           />
           <h1 className="text-2xl font-extrabold">{db.settings?.shopName || 'João Victor Barbershop'}</h1>
           <p className="text-sm text-slate-400">Sistema de gestão</p>

@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
 import { StatCard, PageHeader, Segmented, Avatar } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { brl, isSameDay, lastNDays, fmtTime, fmtDate } from '../lib/utils.js'
+import { brl, isSameDay, lastNDays, fmtTime, fmtDate, serviceNamesOf } from '../lib/utils.js'
 
 export default function BarberDashboard() {
   const { db } = useData()
@@ -112,7 +112,7 @@ export default function BarberDashboard() {
           ) : (
             <div className="space-y-2">
               {myAppointments.map((a) => {
-                const srv = db.services.find((s) => s.id === a.serviceId)
+                const svcNames = serviceNamesOf(a, db.services)
                 return (
                   <div key={a.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/50">
                     <div className="rounded-lg bg-brand-500/10 px-2.5 py-1 text-center text-brand-600 dark:text-brand-400">
@@ -121,7 +121,7 @@ export default function BarberDashboard() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{a.clientName}</p>
-                      <p className="truncate text-xs text-slate-400">{srv?.name}</p>
+                      <p className="truncate text-xs text-slate-400">{svcNames.join(' + ') || 'Sem serviço'}</p>
                     </div>
                   </div>
                 )

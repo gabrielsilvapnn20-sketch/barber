@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Avatar, Modal, Field, EmptyState } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { brl, fmtTime, isSameDay, todayISO } from '../lib/utils.js'
+import { brl, fmtTime, isSameDay, todayISO, serviceIdsOf, serviceNamesOf } from '../lib/utils.js'
 
 const statusStyle = {
   agendado: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300',
@@ -40,17 +40,26 @@ export default function Agenda() {
     toast.success('Agendamento atualizado.')
   }
 
-  // Ao concluir, lança automaticamente o serviço no financeiro (integra
-  // agenda + "Lançar"), para o valor aparecer na dashboard.
+  // Ao concluir, lança automaticamente cada serviço no financeiro (integra
+  // agenda + "Lançar"), para os valores aparecerem na dashboard.
   const concludeAppointment = (a) => {
-    if (a.txId) {
+    if (a.txIds?.length || a.txId) {
       patch('appointments', a.id, { status: 'concluido' })
       return
     }
-    if (a.serviceId) {
-      const tx = addTransaction({ barberId: a.barberId, clientId: a.clientId, serviceId: a.serviceId })
-      patch('appointments', a.id, { status: 'concluido', txId: tx?.id })
-      toast.success(`Concluído! ${brl(tx?.price || 0)} lançado no financeiro.`)
+    const ids = serviceIdsOf(a)
+    if (ids.length) {
+      let total = 0
+      const txIds = []
+      for (const serviceId of ids) {
+        const tx = addTransaction({ barberId: a.barberId, clientId: a.clientId, serviceId })
+        if (tx) {
+          total += tx.price
+          txIds.push(tx.id)
+        }
+      }
+      patch('appointments', a.id, { status: 'concluido', txIds })
+      toast.success(`Concluído! ${ids.length} serviço(s), ${brl(total)} lançado no financeiro.`)
     } else {
       patch('appointments', a.id, { status: 'concluido' })
       toast.info('Concluído. Sem serviço vinculado — nada foi lançado.')
@@ -102,7 +111,7 @@ export default function Agenda() {
               ) : (
                 <div className="space-y-2">
                   {list.map((a) => {
-                    const srv = db.services.find((s) => s.id === a.serviceId)
+                    const svcNames = serviceNamesOf(a, db.services)
                     return (
                       <div key={a.id} className="rounded-xl border border-slate-100 p-2.5 dark:border-slate-800">
                         <div className="flex items-center justify-between">
@@ -110,7 +119,7 @@ export default function Agenda() {
                           <span className={`badge ${statusStyle[a.status]}`}>{a.status}</span>
                         </div>
                         <p className="mt-1 text-sm font-semibold">{a.clientName}</p>
-                        <p className="text-xs text-slate-400">{srv?.name}</p>
+                        <p className="text-xs text-slate-400">{svcNames.length ? svcNames.join(' + ') : 'Sem serviço'}</p>
                         {a.notes && <p className="mt-1 text-xs italic text-slate-400">{a.notes}</p>}
                         <div className="mt-2 flex gap-1.5">
                           {a.status === 'agendado' && (
@@ -159,7 +168,7 @@ function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, d
     clientName: '',
     clientId: '',
     barberId: defaultBarber,
-    serviceId: '',
+    serviceIds: [],
     date: date,
     time: '10:00',
     notes: '',
@@ -173,6 +182,22 @@ function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, d
   }, [open])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+  const toggleService = (id) =>
+    setForm((f) => ({
+      ...f,
+      serviceIds: f.serviceIds.includes(id)
+        ? f.serviceIds.filter((x) => x !== id)
+        : [...f.serviceIds, id],
+    }))
+
+  // Só serviços (produtos não entram em agendamento)
+  const bookableServices = db.services.filter(
+    (s) => s.active && db.categories.find((c) => c.id === s.categoryId)?.type === 'service',
+  )
+  const total = form.serviceIds.reduce(
+    (sum, id) => sum + (db.services.find((s) => s.id === id)?.price || 0),
+    0,
+  )
 
   const submit = () => {
     if (!form.clientName.trim()) return
@@ -181,7 +206,7 @@ function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, d
       clientName: form.clientName.trim(),
       clientId: form.clientId || null,
       barberId: form.barberId,
-      serviceId: form.serviceId,
+      serviceIds: form.serviceIds,
       datetime,
       notes: form.notes,
     })
@@ -233,13 +258,40 @@ function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, d
             ))}
           </select>
         </Field>
-        <Field label="Serviço">
-          <select className="input" value={form.serviceId} onChange={(e) => set('serviceId', e.target.value)}>
-            <option value="">Selecione</option>
-            {db.services.filter((s) => s.active).map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+        <Field label={`Serviços${form.serviceIds.length ? ` (${form.serviceIds.length})` : ''}`}>
+          <div className="max-h-52 space-y-1.5 overflow-y-auto rounded-xl border border-slate-200 p-2 dark:border-slate-700">
+            {bookableServices.map((s) => {
+              const on = form.serviceIds.includes(s.id)
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleService(s.id)}
+                  className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
+                    on
+                      ? 'border-brand-500 bg-brand-500/10 text-brand-700 dark:text-brand-300'
+                      : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2 font-medium">
+                    <span className={`flex h-4 w-4 items-center justify-center rounded border ${on ? 'border-brand-500 bg-brand-500 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
+                      {on && <Icon.check size={12} />}
+                    </span>
+                    {s.name}
+                  </span>
+                  <span className="text-slate-400">{brl(s.price)}</span>
+                </button>
+              )
+            })}
+            {bookableServices.length === 0 && (
+              <p className="py-3 text-center text-xs text-slate-400">Nenhum serviço cadastrado.</p>
+            )}
+          </div>
+          {form.serviceIds.length > 0 && (
+            <p className="mt-1.5 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Total previsto: <span className="text-brand-500">{brl(total)}</span>
+            </p>
+          )}
         </Field>
         <Field label="Observações">
           <input className="input" value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Opcional" />
