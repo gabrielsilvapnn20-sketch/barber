@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
@@ -100,6 +100,12 @@ export default function Clientes() {
                     <span className="chip"><Avatar name={barber.name} color={barber.color} size={14} /> {barber.name.split(' ')[0]}</span>
                   )}
                 </div>
+                {c.preferences && (
+                  <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-brand-500/10 p-2 text-xs text-brand-700 dark:text-brand-300">
+                    <Icon.scissors size={13} className="mt-0.5 shrink-0" />
+                    <span>{c.preferences}</span>
+                  </p>
+                )}
                 {c.notes && <p className="mt-2 text-xs italic text-slate-400">"{c.notes}"</p>}
               </div>
             )
@@ -138,10 +144,11 @@ function Mini({ label, value }) {
 }
 
 function ClientModal({ open, client, onClose, onSave, onDelete, barbers, isOwner }) {
-  const [form, setForm] = useState({ name: '', phone: '', birthday: '', notes: '', barberId: '' })
-  useMemo(() => {
-    if (client) setForm({ name: client.name, phone: client.phone || '', birthday: client.birthday || '', notes: client.notes || '', barberId: client.barberId || '' })
-    else setForm({ name: '', phone: '', birthday: '', notes: '', barberId: '' })
+  const [form, setForm] = useState({ name: '', phone: '', birthday: '', notes: '', preferences: '', barberId: '' })
+  useEffect(() => {
+    if (!open) return
+    if (client) setForm({ name: client.name, phone: client.phone || '', birthday: client.birthday || '', notes: client.notes || '', preferences: client.preferences || '', barberId: client.barberId || '' })
+    else setForm({ name: '', phone: '', birthday: '', notes: '', preferences: '', barberId: '' })
   }, [client, open])
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -172,7 +179,10 @@ function ClientModal({ open, client, onClose, onSave, onDelete, barbers, isOwner
             </select>
           </Field>
         )}
-        <Field label="Observações"><textarea className="input" rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} /></Field>
+        <Field label="Preferências de corte / estilo">
+          <textarea className="input" rows={2} value={form.preferences} onChange={(e) => set('preferences', e.target.value)} placeholder="Ex: máquina 2 nas laterais, tesoura em cima, risco à direita, barba na navalha" />
+        </Field>
+        <Field label="Observações"><textarea className="input" rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Alergias, forma de pagamento preferida, etc." /></Field>
       </div>
     </Modal>
   )

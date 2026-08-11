@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Avatar, Modal, Field, EmptyState } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { fmtTime, isSameDay, todayISO } from '../lib/utils.js'
+import { brl, fmtTime, isSameDay, todayISO } from '../lib/utils.js'
 
 const statusStyle = {
   agendado: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300',
@@ -13,7 +13,7 @@ const statusStyle = {
 }
 
 export default function Agenda() {
-  const { db, addTo, patch, remove, onlyBarbers, owner } = useData()
+  const { db, addTo, patch, remove, addTransaction, serviceById, onlyBarbers, owner } = useData()
   const { user, isOwner } = useAuth()
   const toast = useToast()
   const [date, setDate] = useState(todayISO())
@@ -38,6 +38,23 @@ export default function Agenda() {
   const setStatus = (id, status) => {
     patch('appointments', id, { status })
     toast.success('Agendamento atualizado.')
+  }
+
+  // Ao concluir, lança automaticamente o serviço no financeiro (integra
+  // agenda + "Lançar"), para o valor aparecer na dashboard.
+  const concludeAppointment = (a) => {
+    if (a.txId) {
+      patch('appointments', a.id, { status: 'concluido' })
+      return
+    }
+    if (a.serviceId) {
+      const tx = addTransaction({ barberId: a.barberId, clientId: a.clientId, serviceId: a.serviceId })
+      patch('appointments', a.id, { status: 'concluido', txId: tx?.id })
+      toast.success(`Concluído! ${brl(tx?.price || 0)} lançado no financeiro.`)
+    } else {
+      patch('appointments', a.id, { status: 'concluido' })
+      toast.info('Concluído. Sem serviço vinculado — nada foi lançado.')
+    }
   }
 
   return (
@@ -98,7 +115,7 @@ export default function Agenda() {
                         <div className="mt-2 flex gap-1.5">
                           {a.status === 'agendado' && (
                             <>
-                              <button onClick={() => setStatus(a.id, 'concluido')} className="flex-1 rounded-lg bg-emerald-500/10 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <button onClick={() => concludeAppointment(a)} className="flex-1 rounded-lg bg-emerald-500/10 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                                 Concluir
                               </button>
                               <button onClick={() => setStatus(a.id, 'cancelado')} className="flex-1 rounded-lg bg-red-500/10 py-1 text-xs font-semibold text-red-600 dark:text-red-400">
@@ -138,29 +155,36 @@ export default function Agenda() {
 }
 
 function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, date }) {
-  const [form, setForm] = useState({
+  const blank = () => ({
     clientName: '',
     clientId: '',
     barberId: defaultBarber,
     serviceId: '',
+    date: date,
     time: '10:00',
     notes: '',
   })
+  const [form, setForm] = useState(blank)
+
+  // Reinicia o formulário sempre que o modal abre (usa o dia selecionado).
+  useEffect(() => {
+    if (open) setForm(blank())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
   const submit = () => {
-    if (!form.clientName) return
-    const datetime = new Date(`${date}T${form.time}`).toISOString()
+    if (!form.clientName.trim()) return
+    const datetime = new Date(`${form.date}T${form.time}`).toISOString()
     onSave({
-      clientName: form.clientName,
+      clientName: form.clientName.trim(),
       clientId: form.clientId || null,
       barberId: form.barberId,
       serviceId: form.serviceId,
       datetime,
       notes: form.notes,
     })
-    setForm({ clientName: '', clientId: '', barberId: defaultBarber, serviceId: '', time: '10:00', notes: '' })
   }
 
   return (
@@ -195,17 +219,20 @@ function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, d
           </datalist>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Barbeiro">
-            <select className="input" value={form.barberId} onChange={(e) => set('barberId', e.target.value)}>
-              {barbers.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
+          <Field label="Dia">
+            <input type="date" className="input" value={form.date} onChange={(e) => set('date', e.target.value)} />
           </Field>
           <Field label="Horário">
             <input type="time" className="input" value={form.time} onChange={(e) => set('time', e.target.value)} />
           </Field>
         </div>
+        <Field label="Barbeiro">
+          <select className="input" value={form.barberId} onChange={(e) => set('barberId', e.target.value)}>
+            {barbers.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </Field>
         <Field label="Serviço">
           <select className="input" value={form.serviceId} onChange={(e) => set('serviceId', e.target.value)}>
             <option value="">Selecione</option>

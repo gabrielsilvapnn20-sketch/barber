@@ -16,14 +16,18 @@ import { useData, ownerMetrics, rankingThisMonth, txInPeriod } from '../context/
 import { useTheme } from '../context/ThemeContext.jsx'
 import { StatCard, PageHeader, Segmented, Avatar, Progress } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { brl, isSameDay, lastNDays, fmtTime, monthKey, weekdayName } from '../lib/utils.js'
+import { brl, isSameDay, lastNDays, fmtTime, fmtDate, monthKey, todayISO } from '../lib/utils.js'
 
 export default function OwnerDashboard() {
   const { db, owner } = useData()
   const { theme } = useTheme()
   const [period, setPeriod] = useState('month')
+  const [range, setRange] = useState({ from: todayISO(), to: todayISO() })
 
-  const m = useMemo(() => ownerMetrics(db, period), [db, period])
+  const m = useMemo(
+    () => ownerMetrics(db, period, period === 'custom' ? range : null),
+    [db, period, range],
+  )
   const ranking = useMemo(() => rankingThisMonth(db), [db])
 
   const grid = theme === 'dark' ? '#1e293b' : '#e2e8f0'
@@ -66,10 +70,40 @@ export default function OwnerDashboard() {
               { value: 'day', label: 'Dia' },
               { value: 'week', label: 'Semana' },
               { value: 'month', label: 'Mês' },
+              { value: 'custom', label: 'Período' },
             ]}
           />
         }
       />
+
+      {/* Custom date range */}
+      {period === 'custom' && (
+        <div className="card mb-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="label">De</label>
+            <input
+              type="date"
+              className="input !w-auto"
+              value={range.from}
+              max={range.to}
+              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="label">Até</label>
+            <input
+              type="date"
+              className="input !w-auto"
+              value={range.to}
+              min={range.from}
+              onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+            />
+          </div>
+          <p className="pb-2.5 text-xs text-slate-400">
+            {fmtDate(range.from)} — {fmtDate(range.to)}
+          </p>
+        </div>
+      )}
 
       {/* Metric cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

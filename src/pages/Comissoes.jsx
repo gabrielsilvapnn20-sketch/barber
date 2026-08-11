@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Modal, Field, Segmented } from '../components/ui.jsx'
@@ -131,7 +131,8 @@ export default function Comissoes() {
 
 function CategoryModal({ open, category, onClose, onSave }) {
   const [form, setForm] = useState({ name: '', type: 'service', barberPct: 50 })
-  useMemo(() => {
+  useEffect(() => {
+    if (!open) return
     if (category) setForm({ name: category.name, type: category.type, barberPct: category.barberPct })
     else setForm({ name: '', type: 'service', barberPct: 50 })
   }, [category, open])
@@ -166,7 +167,8 @@ function CategoryModal({ open, category, onClose, onSave }) {
 
 function ServiceModal({ open, service, categories, onClose, onSave }) {
   const [form, setForm] = useState({ name: '', categoryId: '', price: '' })
-  useMemo(() => {
+  useEffect(() => {
+    if (!open) return
     if (service) setForm({ name: service.name, categoryId: service.categoryId, price: service.price, allowedBarberIds: service.allowedBarberIds })
     else setForm({ name: '', categoryId: categories[0]?.id || '', price: '' })
   }, [service, open])

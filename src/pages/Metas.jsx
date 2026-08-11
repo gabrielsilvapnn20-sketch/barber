@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData, ownerMetrics } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Progress, Modal, Field, EmptyState } from '../components/ui.jsx'
@@ -91,7 +91,8 @@ export default function Metas() {
 
 function GoalModal({ open, goal, onClose, onSave }) {
   const [form, setForm] = useState({ monthKey: monthKey(), target: '', label: '' })
-  useMemo(() => {
+  useEffect(() => {
+    if (!open) return
     if (goal) setForm({ monthKey: goal.monthKey, target: goal.target, label: goal.label || '' })
     else setForm({ monthKey: monthKey(), target: '', label: 'Meta de faturamento' })
   }, [goal, open])

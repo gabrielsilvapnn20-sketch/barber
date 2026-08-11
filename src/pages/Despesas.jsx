@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Modal, Field, StatCard, EmptyState } from '../components/ui.jsx'
@@ -83,7 +83,8 @@ export default function Despesas() {
 
 function ExpenseModal({ open, expense, onClose, onSave }) {
   const [form, setForm] = useState({ description: '', category: 'Fixo', amount: '', date: new Date().toISOString().slice(0, 10) })
-  useMemo(() => {
+  useEffect(() => {
+    if (!open) return
     if (expense) setForm({ description: expense.description, category: expense.category, amount: expense.amount, date: expense.date.slice(0, 10) })
     else setForm({ description: '', category: 'Fixo', amount: '', date: new Date().toISOString().slice(0, 10) })
   }, [expense, open])

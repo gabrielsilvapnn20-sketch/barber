@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData, barberMetrics } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Avatar, Modal, Field } from '../components/ui.jsx'
@@ -187,7 +187,8 @@ function ServiceReleaser({ barberId, db, setDb }) {
 
 function BarberModal({ open, user, onClose, onSave, onToggleActive }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', pin: '', password: '' })
-  useMemo(() => {
+  useEffect(() => {
+    if (!open) return
     if (user) setForm({ name: user.name, email: user.email, phone: user.phone || '', pin: user.pin || '', password: '' })
     else setForm({ name: '', email: '', phone: '', pin: '', password: '' })
   }, [user, open])

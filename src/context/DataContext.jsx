@@ -5,10 +5,25 @@ import { uid, isSameDay, isSameMonth, monthKey } from '../lib/utils.js'
 const DataContext = createContext(null)
 const KEY = 'barber.db.v1'
 
+// Ajustes aplicados a bancos já existentes no dispositivo (migrações leves).
+function migrate(db) {
+  if (!db.settings) db.settings = {}
+  // Atualiza o nome antigo de demonstração para a marca atual, sem sobrescrever
+  // um nome personalizado que o usuário já tenha definido.
+  if (!db.settings.shopName || db.settings.shopName === 'Barbearia Navalha de Ouro') {
+    db.settings.shopName = 'João Victor Barbershop'
+  }
+  return db
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const db = migrate(JSON.parse(raw))
+      localStorage.setItem(KEY, JSON.stringify(db))
+      return db
+    }
   } catch (e) {
     console.warn('Falha ao ler dados locais, recriando.', e)
   }
@@ -131,7 +146,17 @@ export const useData = () => useContext(DataContext)
 
 // ---- Derived metric helpers (pure, exported for reuse) ----
 
-export function txInPeriod(transactions, period, ref = new Date()) {
+// period pode ser 'day' | 'week' | 'month' | 'custom'.
+// Para 'custom', passe range = { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }.
+export function txInPeriod(transactions, period, ref = new Date(), range = null) {
+  if (period === 'custom' && range?.from && range?.to) {
+    const from = new Date(range.from + 'T00:00:00')
+    const to = new Date(range.to + 'T23:59:59')
+    return transactions.filter((t) => {
+      const d = new Date(t.date)
+      return d >= from && d <= to
+    })
+  }
   return transactions.filter((t) => {
     if (period === 'day') return isSameDay(t.date, ref)
     if (period === 'month') return isSameMonth(t.date, ref)
@@ -144,8 +169,8 @@ export function txInPeriod(transactions, period, ref = new Date()) {
   })
 }
 
-export function ownerMetrics(db, period = 'month') {
-  const txs = txInPeriod(db.transactions, period)
+export function ownerMetrics(db, period = 'month', range = null) {
+  const txs = txInPeriod(db.transactions, period, new Date(), range)
   const ownerId = db.users.find((u) => u.role === 'owner')?.id
   const total = txs.reduce((s, t) => s + t.price, 0)
   const ownerPersonal = txs
