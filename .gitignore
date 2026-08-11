@@ -10,6 +10,3 @@ yarn-debug.log*
 yarn-error.log*
 .vite
 
-# generated PWA icons (see scripts/gen-icons.mjs)
-public/icon-192.png
-public/icon-512.png

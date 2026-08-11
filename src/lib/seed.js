@@ -182,7 +182,7 @@ export function buildSeed() {
     daysOff,
     gallery,
     settings: {
-      shopName: 'Barbearia Navalha de Ouro',
+      shopName: 'João Victor Barbershop',
       productDefaultPct: 20,
     },
   }

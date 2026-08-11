@@ -13,14 +13,14 @@ export default defineConfig({
       filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: null, // we register manually in main.jsx (need the registration object)
-      includeAssets: ['favicon.svg', 'robots.txt'],
+      includeAssets: ['logo.svg', 'robots.txt'],
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
       },
       manifest: {
-        name: 'Barbearia — Gestão',
-        short_name: 'Barbearia',
-        description: 'App de gestão para barbearia',
+        name: 'João Victor Barbershop',
+        short_name: 'João Victor',
+        description: 'Gestão da João Victor Barbershop — agenda, comissões e financeiro',
         lang: 'pt-BR',
         dir: 'ltr',
         theme_color: '#0ea5e9',

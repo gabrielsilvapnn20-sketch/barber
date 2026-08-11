@@ -5,9 +5,7 @@
   "type": "module",
   "description": "App de gestão para barbearia — controle de agenda, comissões, financeiro e equipe",
   "scripts": {
-    "gen:icons": "node scripts/gen-icons.mjs",
-    "predev": "node scripts/gen-icons.mjs",
-    "prebuild": "node scripts/gen-icons.mjs",
+    "gen:icons": "node scripts/gen-logo-icons.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

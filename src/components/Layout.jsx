@@ -80,14 +80,14 @@ export default function Layout({ children }) {
       <div className="lg:pl-64">
         {/* Top bar (mobile) */}
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur lg:hidden dark:border-slate-800 dark:bg-slate-950/80">
-          <button onClick={() => setOpen(true)} className="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button onClick={() => setOpen(true)} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800">
             <Icon.menu />
           </button>
-          <div className="flex items-center gap-2 font-bold">
-            <span className="text-brand-500"><Icon.scissors /></span>
-            <span className="truncate">{db.settings?.shopName || 'Barbearia'}</span>
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2 font-bold">
+            <img src="/logo.svg" alt="" className="h-7 w-7 shrink-0 rounded-md" />
+            <span className="truncate">{db.settings?.shopName || 'João Victor Barbershop'}</span>
           </div>
-          <button onClick={toggle} className="rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button onClick={toggle} className="shrink-0 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800">
             {theme === 'dark' ? <Icon.sun /> : <Icon.moon />}
           </button>
         </header>
@@ -122,12 +122,10 @@ export default function Layout({ children }) {
 function Brand({ shopName, onClose }) {
   return (
     <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-white">
-          <Icon.scissors />
-        </div>
-        <div className="leading-tight">
-          <p className="text-sm font-extrabold">{shopName || 'Barbearia'}</p>
+      <div className="flex min-w-0 items-center gap-2.5">
+        <img src="/logo.svg" alt="" className="h-9 w-9 shrink-0 rounded-lg" />
+        <div className="min-w-0 leading-tight">
+          <p className="truncate text-sm font-extrabold">{shopName || 'João Victor Barbershop'}</p>
           <p className="text-[11px] text-slate-400">Gestão</p>
         </div>
       </div>

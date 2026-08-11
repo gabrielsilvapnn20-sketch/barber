@@ -34,15 +34,17 @@ export function StatCard({ icon, label, value, hint, tone = 'brand' }) {
   }
   return (
     <div className="card overflow-hidden">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {label}
           </p>
-          <p className="mt-1.5 text-2xl font-extrabold tracking-tight">{value}</p>
-          {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+          <p className="mt-1.5 text-lg font-extrabold leading-tight tracking-tight tabular-nums sm:text-2xl">
+            {value}
+          </p>
+          {hint && <p className="mt-1 truncate text-xs text-slate-400">{hint}</p>}
         </div>
-        <div className={`rounded-xl bg-gradient-to-br p-2.5 ${tones[tone]}`}>{icon}</div>
+        <div className={`shrink-0 rounded-xl bg-gradient-to-br p-2.5 ${tones[tone]}`}>{icon}</div>
       </div>
     </div>
   )
@@ -85,11 +87,11 @@ export function Modal({ open, onClose, title, children, footer, wide }) {
 export function PageHeader({ title, subtitle, action }) {
   return (
     <div className="mb-5 flex items-end justify-between gap-3">
-      <div>
-        <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate text-xl font-extrabold tracking-tight sm:text-2xl">{title}</h1>
+        {subtitle && <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
       </div>
-      {action}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }

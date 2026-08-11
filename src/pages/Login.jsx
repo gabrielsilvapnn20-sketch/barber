@@ -50,10 +50,12 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center text-white">
-          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 shadow-lg shadow-brand-900/50">
-            <Icon.scissors size={32} />
-          </div>
-          <h1 className="text-2xl font-extrabold">{db.settings?.shopName || 'Barbearia'}</h1>
+          <img
+            src="/logo.svg"
+            alt={db.settings?.shopName || 'João Victor Barbershop'}
+            className="mx-auto mb-3 h-28 w-28 rounded-full bg-white/5 shadow-lg shadow-black/40 ring-1 ring-white/10"
+          />
+          <h1 className="text-2xl font-extrabold">{db.settings?.shopName || 'João Victor Barbershop'}</h1>
           <p className="text-sm text-slate-400">Sistema de gestão</p>
         </div>
 

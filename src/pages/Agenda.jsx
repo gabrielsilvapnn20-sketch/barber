@@ -67,17 +67,17 @@ export default function Agenda() {
         <button className="btn-ghost !px-3" onClick={() => shiftDay(1)}>›</button>
       </div>
 
-      {/* Columns by barber */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(barbers.length, 3)}, minmax(0,1fr))` }}>
+      {/* Columns by barber — rolagem horizontal no mobile, grade no desktop */}
+      <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:snap-none lg:overflow-visible lg:px-0 lg:pb-0 lg:[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
         {barbers.map((b) => {
           const list = dayAppointments.filter((a) => a.barberId === b.id)
           return (
-            <div key={b.id} className="card">
+            <div key={b.id} className="card w-[82vw] max-w-[320px] shrink-0 snap-start lg:w-auto lg:max-w-none">
               <div className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
                 <Avatar name={b.name} color={b.color} size={34} />
-                <div>
-                  <p className="text-sm font-bold">{b.name.split(' ')[0]}</p>
-                  <p className="text-xs text-slate-400">{list.length} agendamento(s)</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold">{b.name.split(' ')[0]}</p>
+                  <p className="truncate text-xs text-slate-400">{list.length} agendamento(s)</p>
                 </div>
               </div>
               {list.length === 0 ? (

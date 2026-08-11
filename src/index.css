@@ -12,9 +12,20 @@ body,
   height: 100%;
 }
 
+/* Evita overflow horizontal (que no celular obrigava a arrastar/dar zoom) */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
 body {
   @apply bg-slate-100 text-slate-900 antialiased;
   -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 .dark body {
