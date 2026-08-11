@@ -13,7 +13,7 @@ export default defineConfig({
       filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: null, // we register manually in main.jsx (need the registration object)
-      includeAssets: ['logo.svg', 'robots.txt'],
+      includeAssets: ['logo.svg', 'apple-touch-icon.png', 'robots.txt'],
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
       },
