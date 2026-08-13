@@ -68,13 +68,14 @@ export default function InstallGate() {
         <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/70 backdrop-blur-sm sm:items-center">
           <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl animate-fade-in dark:bg-slate-900 sm:max-w-md sm:rounded-3xl">
             <div className="mb-4 flex flex-col items-center text-center">
-              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-700 text-white shadow-lg">
-                <Icon.scissors size={32} />
+              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-sun-400 to-brand-600 text-white shadow-lg">
+                <Icon.flame size={32} />
               </div>
               <h2 className="text-xl font-extrabold">Instale o app na tela inicial</h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Para funcionar em tela cheia (sem barra do navegador) e receber
-                notificações, adicione a Barbearia à tela inicial do seu celular.
+                Para pedir mais rápido, acompanhar sua entrega em tempo real e
+                receber notificações, adicione a Lanchonete Rodrigues à tela
+                inicial do seu celular.
               </p>
             </div>
 
@@ -146,9 +147,9 @@ function IosSteps() {
       <Step n={3}>
         Confirme em <b>“Adicionar”</b> e abra o app pelo novo ícone.
       </Step>
-      <p className="rounded-xl bg-amber-50 p-2.5 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
-        No iPhone, as notificações só funcionam com o app aberto pela tela inicial
-        (iOS 16.4 ou superior). Por isso a instalação é necessária.
+      <p className="rounded-xl bg-sun-50 p-2.5 text-xs text-sun-800 dark:bg-sun-900/20 dark:text-sun-300">
+        No iPhone, as notificações do pedido só funcionam com o app aberto pela
+        tela inicial (iOS 16.4 ou superior).
       </p>
     </div>
   )
@@ -161,7 +162,7 @@ function GenericSteps({ isAndroid }) {
         Abra o menu do navegador <b>(⋮)</b> no canto superior.
       </Step>
       <Step n={2}>
-        Toque em <b>{isAndroid ? '“Instalar aplicativo” / “Adicionar à tela inicial”' : '“Instalar Barbearia”'}</b>.
+        Toque em <b>{isAndroid ? '“Instalar aplicativo” / “Adicionar à tela inicial”' : '“Instalar Lanchonete Rodrigues”'}</b>.
       </Step>
       <Step n={3}>Confirme e abra o app pelo ícone criado.</Step>
     </div>

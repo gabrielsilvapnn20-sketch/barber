@@ -20,9 +20,9 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {}
   } catch {
-    data = { title: 'Barbearia', body: event.data ? event.data.text() : '' }
+    data = { title: 'Lanchonete Rodrigues', body: event.data ? event.data.text() : '' }
   }
-  const title = data.title || 'Barbearia'
+  const title = data.title || 'Lanchonete Rodrigues'
   const options = {
     body: data.body || '',
     icon: data.icon || '/icon-192.png',
@@ -40,7 +40,7 @@ self.addEventListener('message', (event) => {
   const msg = event.data || {}
   if (msg.type === 'SHOW_NOTIFICATION') {
     const { title, ...options } = msg.payload || {}
-    self.registration.showNotification(title || 'Barbearia', {
+    self.registration.showNotification(title || 'Lanchonete Rodrigues', {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       vibrate: [80, 40, 80],

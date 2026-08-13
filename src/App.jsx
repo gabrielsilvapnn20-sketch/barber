@@ -1,67 +1,72 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext.jsx'
-import Layout from './components/Layout.jsx'
 import InstallGate from './components/InstallGate.jsx'
 import NotificationEngine from './components/NotificationEngine.jsx'
-import Login from './pages/Login.jsx'
-import OwnerDashboard from './pages/OwnerDashboard.jsx'
-import BarberDashboard from './pages/BarberDashboard.jsx'
-import Agenda from './pages/Agenda.jsx'
-import Fila from './pages/Fila.jsx'
-import Lancar from './pages/Lancar.jsx'
-import Clientes from './pages/Clientes.jsx'
-import Equipe from './pages/Equipe.jsx'
-import Financeiro from './pages/Financeiro.jsx'
-import Despesas from './pages/Despesas.jsx'
-import Metas from './pages/Metas.jsx'
-import Caixa from './pages/Caixa.jsx'
-import Comissoes from './pages/Comissoes.jsx'
-import Galeria from './pages/Galeria.jsx'
-import Lembretes from './pages/Lembretes.jsx'
-import Config from './pages/Config.jsx'
+import ClientLayout from './components/ClientLayout.jsx'
+import ManagerLayout from './components/ManagerLayout.jsx'
 
-function OwnerOnly({ children }) {
-  const { isOwner } = useAuth()
-  return isOwner ? children : <Navigate to="/" replace />
+// Cliente
+import Menu from './pages/client/Menu.jsx'
+import Cart from './pages/client/Cart.jsx'
+import Checkout from './pages/client/Checkout.jsx'
+import OrderTracking from './pages/client/OrderTracking.jsx'
+import Orders from './pages/client/Orders.jsx'
+import Account from './pages/client/Account.jsx'
+
+// Gestor
+import ManagerLogin from './pages/manager/ManagerLogin.jsx'
+import Dashboard from './pages/manager/Dashboard.jsx'
+import OrdersBoard from './pages/manager/OrdersBoard.jsx'
+import Stock from './pages/manager/Stock.jsx'
+import Finance from './pages/manager/Finance.jsx'
+import CashBox from './pages/manager/CashBox.jsx'
+import Messages from './pages/manager/Messages.jsx'
+import Settings from './pages/manager/Settings.jsx'
+
+function ManagerArea() {
+  const { isManager } = useAuth()
+  if (!isManager) return <ManagerLogin />
+  return (
+    <ManagerLayout>
+      <Routes>
+        <Route index element={<Dashboard />} />
+        <Route path="pedidos" element={<OrdersBoard />} />
+        <Route path="estoque" element={<Stock />} />
+        <Route path="financeiro" element={<Finance />} />
+        <Route path="caixa" element={<CashBox />} />
+        <Route path="mensagens" element={<Messages />} />
+        <Route path="config" element={<Settings />} />
+        <Route path="*" element={<Navigate to="/gestor" replace />} />
+      </Routes>
+    </ManagerLayout>
+  )
+}
+
+function ClientArea() {
+  return (
+    <ClientLayout>
+      <Routes>
+        <Route index element={<Menu />} />
+        <Route path="carrinho" element={<Cart />} />
+        <Route path="checkout" element={<Checkout />} />
+        <Route path="pedido/:id" element={<OrderTracking />} />
+        <Route path="pedidos" element={<Orders />} />
+        <Route path="conta" element={<Account />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ClientLayout>
+  )
 }
 
 export default function App() {
-  const { user, isOwner } = useAuth()
-
-  if (!user)
-    return (
-      <>
-        <InstallGate />
-        <Login />
-      </>
-    )
-
   return (
     <>
       <InstallGate />
       <NotificationEngine />
-      <Layout>
       <Routes>
-        <Route path="/" element={isOwner ? <OwnerDashboard /> : <BarberDashboard />} />
-        <Route path="/agenda" element={<Agenda />} />
-        <Route path="/fila" element={<Fila />} />
-        <Route path="/lancar" element={<Lancar />} />
-        <Route path="/clientes" element={<Clientes />} />
-        <Route path="/galeria" element={<Galeria />} />
-
-        {/* Owner-only */}
-        <Route path="/equipe" element={<OwnerOnly><Equipe /></OwnerOnly>} />
-        <Route path="/financeiro" element={<OwnerOnly><Financeiro /></OwnerOnly>} />
-        <Route path="/despesas" element={<OwnerOnly><Despesas /></OwnerOnly>} />
-        <Route path="/metas" element={<OwnerOnly><Metas /></OwnerOnly>} />
-        <Route path="/caixa" element={<OwnerOnly><Caixa /></OwnerOnly>} />
-        <Route path="/comissoes" element={<OwnerOnly><Comissoes /></OwnerOnly>} />
-        <Route path="/lembretes" element={<OwnerOnly><Lembretes /></OwnerOnly>} />
-        <Route path="/config" element={<OwnerOnly><Config /></OwnerOnly>} />
-
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/gestor/*" element={<ManagerArea />} />
+        <Route path="/*" element={<ClientArea />} />
       </Routes>
-      </Layout>
     </>
   )
 }

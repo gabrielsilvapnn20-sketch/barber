@@ -198,6 +198,108 @@ export const Icon = {
       <circle cx="7.5" cy="7.5" r="1.3" />
     </Svg>
   ),
+  cart: (p) => (
+    <Svg {...p}>
+      <circle cx="9" cy="20" r="1.4" />
+      <circle cx="18" cy="20" r="1.4" />
+      <path d="M2 3h2.5l2.2 12.3a1.5 1.5 0 0 0 1.5 1.2h8.4a1.5 1.5 0 0 0 1.5-1.2L21 7H6" />
+    </Svg>
+  ),
+  flame: (p) => (
+    <Svg {...p}>
+      <path d="M12 3s5 4 5 9a5 5 0 0 1-10 0c0-2 1-3 1-3s0 2 2 2c1.5 0 2-1.5 1-4s-2-3-0-5z" />
+    </Svg>
+  ),
+  moto: (p) => (
+    <Svg {...p}>
+      <circle cx="6" cy="17" r="3" />
+      <circle cx="18" cy="17" r="3" />
+      <path d="M6 17h6l3-6h3M12 17l3-6M15 6h3l1 3" />
+    </Svg>
+  ),
+  bowl: (p) => (
+    <Svg {...p}>
+      <path d="M3 11h18a9 9 0 0 1-18 0z" />
+      <path d="M8 7c0-1 1-1 1-2M12 6c0-1 1-1 1-2M16 7c0-1 1-1 1-2" />
+    </Svg>
+  ),
+  cup: (p) => (
+    <Svg {...p}>
+      <path d="M6 3h12l-1.2 16.2a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8z" />
+      <path d="M5.5 8h13" />
+    </Svg>
+  ),
+  receipt: (p) => (
+    <Svg {...p}>
+      <path d="M5 3h14v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21z" />
+      <path d="M9 8h6M9 12h6" />
+    </Svg>
+  ),
+  star: (p) => (
+    <Svg {...p}>
+      <path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 9.8l6.5-.9z" />
+    </Svg>
+  ),
+  heart: (p) => (
+    <Svg {...p}>
+      <path d="M12 20s-7-4.4-9.3-8.5C1.1 8.5 2.6 5 6 5c2 0 3.2 1.2 4 2.4C10.8 6.2 12 5 14 5c3.4 0 4.9 3.5 3.3 6.5C19 15.6 12 20 12 20z" />
+    </Svg>
+  ),
+  box: (p) => (
+    <Svg {...p}>
+      <path d="M3 7l9-4 9 4v10l-9 4-9-4z" />
+      <path d="M3 7l9 4 9-4M12 11v10" />
+    </Svg>
+  ),
+  store: (p) => (
+    <Svg {...p}>
+      <path d="M4 9l1-5h14l1 5" />
+      <path d="M4 9a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 6 0 2.5 2.5 0 0 0 5 0" />
+      <path d="M5 11v9h14v-9M9 20v-5h4v5" />
+    </Svg>
+  ),
+  chat: (p) => (
+    <Svg {...p}>
+      <path d="M4 5h16v11H8l-4 4z" />
+      <path d="M8 9h8M8 12h5" />
+    </Svg>
+  ),
+  home: (p) => (
+    <Svg {...p}>
+      <path d="M4 11l8-7 8 7" />
+      <path d="M6 10v10h12V10" />
+    </Svg>
+  ),
+  minus: (p) => (
+    <Svg {...p}>
+      <path d="M5 12h14" />
+    </Svg>
+  ),
+  chevronRight: (p) => (
+    <Svg {...p}>
+      <path d="M9 6l6 6-6 6" />
+    </Svg>
+  ),
+  mapPin: (p) => (
+    <Svg {...p}>
+      <path d="M12 21s7-5.6 7-11a7 7 0 0 0-14 0c0 5.4 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </Svg>
+  ),
+  sparkles: (p) => (
+    <Svg {...p}>
+      <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" />
+      <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z" />
+    </Svg>
+  ),
+  pix: (p) => (
+    <Svg {...p}>
+      <path d="M12 3l3 3-3 3-3-3z" />
+      <path d="M12 15l3 3-3 3-3-3z" />
+      <path d="M3 12l3-3 3 3-3 3z" />
+      <path d="M15 12l3-3 3 3-3 3z" />
+    </Svg>
+  ),
 }
 
 export default Icon

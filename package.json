@@ -1,9 +1,9 @@
 {
-  "name": "barbearia-gestao",
+  "name": "lanchonete-rodrigues",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.0.0",
   "type": "module",
-  "description": "App de gestão para barbearia — controle de agenda, comissões, financeiro e equipe",
+  "description": "Lanchonete Rodrigues — PWA de delivery de espetinho/jantinha com painel de gestão (pedidos, estoque, caixa e financeiro)",
   "scripts": {
     "gen:icons": "node scripts/gen-icons.mjs",
     "prebuild": "node scripts/gen-icons.mjs",

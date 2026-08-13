@@ -7,6 +7,7 @@ import './index.css'
 import { ThemeProvider } from './context/ThemeContext.jsx'
 import { DataProvider } from './context/DataContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { CartProvider } from './context/CartContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
 import { PWAProvider } from './context/PWAContext.jsx'
 
@@ -20,9 +21,11 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <ToastProvider>
           <DataProvider>
             <AuthProvider>
-              <PWAProvider>
-                <App />
-              </PWAProvider>
+              <CartProvider>
+                <PWAProvider>
+                  <App />
+                </PWAProvider>
+              </CartProvider>
             </AuthProvider>
           </DataProvider>
         </ToastProvider>

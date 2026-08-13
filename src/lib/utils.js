@@ -3,6 +3,8 @@
 export const uid = (prefix = 'id') =>
   `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 
+export const onlyDigits = (s = '') => String(s).replace(/\D/g, '')
+
 // Um agendamento pode ter vários serviços (serviceIds). Mantém compatibilidade
 // com agendamentos antigos que tinham um único serviceId.
 export const serviceIdsOf = (appointment = {}) => {

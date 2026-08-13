@@ -1,208 +1,316 @@
 import { uid } from './utils.js'
 
-// Build seed data. Dates are computed relative to "now" so the dashboards
-// always show meaningful numbers on first run.
+// Versão do catálogo. Ao incrementar, a migração (ver DataContext) reaplica o
+// catálogo aos aparelhos que já têm o app instalado, sem apagar os pedidos.
+export const CATALOG_VERSION = 1
+
+/* ------------------------------------------------------------------ *
+ * CATÁLOGO — estrutura genérica, orientada a dados (não "hardcoded").
+ *
+ * Cada item declara COMO é montado, via `build`:
+ *   - 'simple'   → só quantidade (espeto avulso, bebida)
+ *   - 'assembly' → etapas de escolha (`steps`) + acompanhamentos fixos
+ *                  (`includes`). Ex.: Jantinha, Completo.
+ *   - 'soup'     → escolha de sabor com opção de misturar dois (`flavors`,
+ *                  `allowMix`) + adicionais (`addons`). Ex.: Caldos.
+ *
+ * Essa mesma estrutura serve para replicar depois em lanchonete/pizzaria:
+ * basta trocar categorias, itens e regras — o fluxo do app lê tudo isto.
+ * ------------------------------------------------------------------ */
+
+// Lista base de espetos — vira tanto os "espetos avulsos" quanto as opções de
+// escolha das etapas da Jantinha e do Completo (mantém tudo em sincronia).
+const ESPETOS = [
+  { id: 'frango_bacon', label: 'Frango com bacon', price: 10 },
+  { id: 'contra_file', label: 'Contra filé', price: 12 },
+  { id: 'cupim', label: 'Cupim', price: 12 },
+  { id: 'asinha', label: 'Asinha', price: 9 },
+  { id: 'coracao', label: 'Coração', price: 9 },
+  { id: 'provolone', label: 'Queijo provolone', price: 10 },
+]
+
+const espetoOptions = ESPETOS.map((e) => ({ id: e.id, label: e.label }))
+
+export function buildCatalog() {
+  const categories = [
+    { id: 'cat_espetos', name: 'Espetos avulsos', emoji: '🍢', order: 1, desc: 'No capricho, feito na brasa' },
+    { id: 'cat_jantinha', name: 'Jantinha completa', emoji: '🍛', order: 2, desc: 'A refeição completa da casa' },
+    { id: 'cat_completo', name: 'Completo', emoji: '🍽️', order: 3, desc: 'Versão reduzida da jantinha' },
+    { id: 'cat_caldos', name: 'Caldos', emoji: '🍲', order: 4, desc: 'Quentinho, pode misturar sabores' },
+    { id: 'cat_bebidas', name: 'Bebidas', emoji: '🥤', order: 5, desc: 'Geladas pra acompanhar' },
+  ]
+
+  // Espetos avulsos (build simple, um item por espeto)
+  const espetos = ESPETOS.map((e) => ({
+    id: `it_esp_${e.id}`,
+    categoryId: 'cat_espetos',
+    name: e.label,
+    desc: 'Espeto na brasa, no ponto certo.',
+    price: e.price,
+    emoji: '🍢',
+    photo: '',
+    available: true,
+    build: 'simple',
+  }))
+
+  const items = [
+    ...espetos,
+
+    // Jantinha completa (assembly): escolhe espeto + feijão; acompanha fixo.
+    {
+      id: 'it_jantinha',
+      categoryId: 'cat_jantinha',
+      name: 'Jantinha completa',
+      desc: 'Espeto à sua escolha + feijão, arroz, purê, bolinho de milho, salada e mandioca.',
+      price: 25,
+      emoji: '🍛',
+      photo: '',
+      available: true,
+      build: 'assembly',
+      steps: [
+        { id: 'espeto', label: 'Escolha o espeto', required: true, multi: false, options: espetoOptions },
+        {
+          id: 'feijao',
+          label: 'Tipo de feijão',
+          required: true,
+          multi: false,
+          options: [
+            { id: 'tropeiro', label: 'Feijão tropeiro' },
+            { id: 'caldo', label: 'Feijão de caldo' },
+          ],
+        },
+      ],
+      includes: ['Arroz', 'Purê', 'Bolinho de milho', 'Salada (alface e tomate)', 'Mandioca'],
+    },
+
+    // Completo (assembly): escolhe espeto; acompanha fixo (reduzido).
+    {
+      id: 'it_completo',
+      categoryId: 'cat_completo',
+      name: 'Completo',
+      desc: 'Espeto à sua escolha + feijão tropeiro, mandioca e tomate.',
+      price: 18,
+      emoji: '🍽️',
+      photo: '',
+      available: true,
+      build: 'assembly',
+      steps: [
+        { id: 'espeto', label: 'Escolha o espeto', required: true, multi: false, options: espetoOptions },
+      ],
+      includes: ['Feijão tropeiro', 'Mandioca', 'Tomate'],
+    },
+
+    // Caldos (soup): escolhe sabor, pode misturar dois; adicionais inclusos.
+    {
+      id: 'it_caldo',
+      categoryId: 'cat_caldos',
+      name: 'Caldo',
+      desc: 'Servido quentinho. Pode pedir dois sabores na mesma tigela.',
+      price: 15,
+      emoji: '🍲',
+      photo: '',
+      available: true,
+      build: 'soup',
+      flavors: [
+        { id: 'frango', label: 'Frango' },
+        { id: 'feijao', label: 'Feijão' },
+        { id: 'costela', label: 'Costela' },
+      ],
+      allowMix: true,
+      addons: [
+        { id: 'queijo', label: 'Queijo', price: 0 },
+        { id: 'cebolinha', label: 'Cebolinha', price: 0 },
+      ],
+    },
+
+    // Bebidas (simple)
+    bev('it_coca_lata', 'Coca-Cola lata', 6),
+    bev('it_guamin_lata', 'Guaraná Mineiro lata', 5),
+    bev('it_fanta_lata', 'Fanta lata', 6),
+    bev('it_guaant_lata', 'Guaraná Antarctica lata', 6),
+    bev('it_coca_2l', 'Coca-Cola 2 litros', 14),
+    bev('it_guamin_2l', 'Guaraná Mineiro 2 litros', 12),
+    bev('it_suco_laranja', 'Suco de laranja 500ml', 8),
+  ]
+
+  return { categories, items }
+}
+
+function bev(id, name, price) {
+  return {
+    id,
+    categoryId: 'cat_bebidas',
+    name,
+    desc: 'Gelada.',
+    price,
+    emoji: '🥤',
+    photo: '',
+    available: true,
+    build: 'simple',
+  }
+}
+
+export function defaultSettings() {
+  return {
+    shopName: 'Lanchonete Rodrigues',
+    tagline: 'Espetinho & Jantinha',
+    managerPassword: '123456',
+    catalogVersion: CATALOG_VERSION,
+    // Fidelidade
+    loyalty: { everyN: 5, rewardLabel: '1 espeto grátis' },
+    // Horário de funcionamento (days: 0=Dom ... 6=Sáb)
+    hours: { open: '18:00', close: '23:30', days: [0, 2, 3, 4, 5, 6] },
+    // Entrega
+    delivery: {
+      pickup: true,
+      etaDefaultMin: 40,
+      zones: [
+        { id: 'z1', name: 'Centro', fee: 5, etaMin: 30 },
+        { id: 'z2', name: 'Bairro Alto', fee: 7, etaMin: 40 },
+        { id: 'z3', name: 'Zona Rural / Sítios', fee: 12, etaMin: 55 },
+      ],
+    },
+    // Mensagem automática de atraso
+    delayNotice: {
+      minutesOver: 15,
+      text: 'Seu pedido está a caminho, agradecemos a paciência! 🙏',
+    },
+    // Promoção do dia (configurável)
+    promoOfDay: { active: true, text: 'Terça é dia de caldo com desconto especial! 🍲' },
+    payments: ['pix', 'cartao', 'dinheiro'],
+  }
+}
+
+// Dados de demonstração para os dashboards não nascerem vazios.
 export function buildSeed() {
+  const { categories, items } = buildCatalog()
   const now = new Date()
-  const daysAgo = (n, h = 10, m = 0) => {
+  const at = (dayOffset, h, m = 0) => {
     const d = new Date(now)
-    d.setDate(d.getDate() - n)
+    d.setDate(d.getDate() - dayOffset)
     d.setHours(h, m, 0, 0)
     return d.toISOString()
   }
-  const inHours = (h) => {
-    const d = new Date(now)
-    d.setHours(now.getHours() + h, 0, 0, 0)
-    return d.toISOString()
-  }
 
-  const owner = {
-    id: 'usr_owner',
-    name: 'Carlos Mendes',
-    email: 'dono@barbearia.com',
-    password: '123456',
-    pin: '1234',
-    role: 'owner',
-    phone: '(11) 99999-0001',
-    active: true,
-    color: '#0ea5e9',
-  }
-  const barber2 = {
-    id: 'usr_rafa',
-    name: 'Rafael Souza',
-    email: 'rafael@barbearia.com',
-    password: '123456',
-    pin: '2222',
-    role: 'barber',
-    phone: '(11) 99999-0002',
-    active: true,
-    color: '#8b5cf6',
-  }
-  const barber3 = {
-    id: 'usr_bruno',
-    name: 'Bruno Lima',
-    email: 'bruno@barbearia.com',
-    password: '123456',
-    pin: '3333',
-    role: 'barber',
-    phone: '(11) 99999-0003',
-    active: true,
-    color: '#f59e0b',
-  }
-
-  const users = [owner, barber2, barber3]
-
-  // Catálogo real de serviços (categorias + serviços)
-  const { categories, services } = buildCatalog()
-
-  const clients = [
-    { id: 'cli_1', name: 'João Pedro', phone: '(11) 98888-1111', birthday: '1990-08-12', barberId: 'usr_owner', notes: 'Gosta de degradê baixo' },
-    { id: 'cli_2', name: 'Marcos Vinícius', phone: '(11) 98888-2222', birthday: '1985-03-25', barberId: 'usr_rafa', notes: '' },
-    { id: 'cli_3', name: 'Felipe Andrade', phone: '(11) 98888-3333', birthday: '1998-11-05', barberId: 'usr_bruno', notes: 'Alérgico a certos produtos' },
-    { id: 'cli_4', name: 'Lucas Ferreira', phone: '(11) 98888-4444', birthday: '1992-08-08', barberId: 'usr_owner', notes: '' },
-    { id: 'cli_5', name: 'Gabriel Rocha', phone: '(11) 98888-5555', birthday: '2000-01-30', barberId: 'usr_rafa', notes: 'Sempre barba + corte' },
+  const customers = [
+    { id: 'cus_ana', name: 'Ana Paula', phone: '(34) 99999-1001', birthday: '1994-08-13', addresses: [{ id: 'ad1', label: 'Casa', zoneId: 'z1', street: 'Rua das Flores, 120', ref: 'Portão azul' }], favorites: ['it_jantinha'], loyaltyCount: 3, points: 3 },
+    { id: 'cus_joao', name: 'João Marcos', phone: '(34) 99999-1002', birthday: '1988-02-20', addresses: [{ id: 'ad2', label: 'Casa', zoneId: 'z2', street: 'Av. Central, 45', ref: '' }], favorites: [], loyaltyCount: 1, points: 6 },
   ]
 
-  // Helper to build a transaction with commission snapshot
-  const tx = (barberId, serviceId, clientId, when, paymentMethod = 'pix') => {
-    const srv = services.find((s) => s.id === serviceId)
-    const cat = categories.find((c) => c.id === srv.categoryId)
-    const price = srv.price
-    const barberShare = +(price * (cat.barberPct / 100)).toFixed(2)
+  const mkOrder = (o) => {
+    const subtotal = o.items.reduce((s, i) => s + i.lineTotal, 0)
+    const deliveryFee = o.type === 'pickup' ? 0 : (o.deliveryFee ?? 0)
     return {
-      id: uid('tx'),
-      barberId,
-      serviceId,
-      serviceName: srv.name,
-      categoryId: cat.id,
-      categoryName: cat.name,
-      type: cat.type,
-      clientId,
-      price,
-      barberPct: cat.barberPct,
-      barberShare,
-      shopShare: +(price - barberShare).toFixed(2),
-      paymentMethod,
-      date: when,
+      id: uid('ord'),
+      code: o.code,
+      customerId: o.customerId || null,
+      customerName: o.customerName,
+      phone: o.phone || '',
+      source: o.source || 'app', // 'app' | 'local'
+      type: o.type || 'delivery', // 'delivery' | 'pickup'
+      address: o.address || null,
+      zoneId: o.zoneId || null,
+      items: o.items,
+      subtotal,
+      deliveryFee,
+      discount: o.discount || 0,
+      total: +(subtotal + deliveryFee - (o.discount || 0)).toFixed(2),
+      payment: o.payment || { method: 'pix', changeFor: null },
+      status: o.status || 'novo',
+      etaMin: o.etaMin ?? 40,
+      timeline: o.timeline,
+      rating: o.rating || null,
+      createdAt: o.createdAt,
+      notes: o.notes || '',
     }
   }
 
-  const transactions = [
-    // Today
-    tx('usr_owner', 'srv_cabelo', 'cli_1', daysAgo(0, 9, 30)),
-    tx('usr_owner', 'srv_barba', 'cli_1', daysAgo(0, 9, 45)),
-    tx('usr_owner', 'srv_cabelo_barba', 'cli_4', daysAgo(0, 11, 0)),
-    tx('usr_rafa', 'srv_cabelo', 'cli_2', daysAgo(0, 10, 15)),
-    tx('usr_rafa', 'srv_sobr', 'cli_2', daysAgo(0, 10, 30)),
-    tx('usr_bruno', 'srv_corte_alis', 'cli_3', daysAgo(0, 13, 0)),
-    tx('usr_bruno', 'srv_sobr', 'cli_3', daysAgo(0, 13, 20)),
-    // Yesterday
-    tx('usr_owner', 'srv_cabelo', 'cli_4', daysAgo(1, 10)),
-    tx('usr_rafa', 'srv_barba', 'cli_5', daysAgo(1, 14)),
-    tx('usr_rafa', 'srv_cabelo_sobr', 'cli_5', daysAgo(1, 14, 30)),
-    tx('usr_bruno', 'srv_pigment', 'cli_3', daysAgo(1, 16)),
-    // Earlier this month
-    tx('usr_owner', 'srv_cabelo_barba', 'cli_1', daysAgo(3, 11)),
-    tx('usr_owner', 'srv_cabelo', 'cli_4', daysAgo(4, 15)),
-    tx('usr_rafa', 'srv_alis', 'cli_2', daysAgo(5, 10)),
-    tx('usr_rafa', 'srv_cabelo', 'cli_2', daysAgo(6, 12)),
-    tx('usr_bruno', 'srv_cabelo', 'cli_3', daysAgo(7, 9)),
-    tx('usr_bruno', 'srv_barba', 'cli_3', daysAgo(8, 17)),
-    tx('usr_owner', 'srv_corte_alis_barba', 'cli_1', daysAgo(9, 11)),
-    tx('usr_rafa', 'srv_cabelo_barba', 'cli_5', daysAgo(10, 13)),
-    tx('usr_bruno', 'srv_cabelo', 'cli_3', daysAgo(12, 16)),
+  const line = (item, qty, opts = {}) => ({
+    uid: uid('li'),
+    itemId: item,
+    name: opts.name,
+    unitPrice: opts.unitPrice,
+    qty,
+    lineTotal: +(opts.unitPrice * qty).toFixed(2),
+    selections: opts.selections || null,
+    summary: opts.summary || '',
+  })
+
+  const tl = (created, stages) => stages.map((s, i) => ({ status: s, at: created }))
+
+  const orders = [
+    mkOrder({
+      code: 'R-1042', customerId: 'cus_ana', customerName: 'Ana Paula', phone: '(34) 99999-1001',
+      type: 'delivery', zoneId: 'z1', deliveryFee: 5,
+      address: { street: 'Rua das Flores, 120', ref: 'Portão azul', zoneId: 'z1' },
+      items: [
+        line('it_jantinha', 1, { name: 'Jantinha completa', unitPrice: 25, summary: 'Cupim · Feijão tropeiro' }),
+        line('it_coca_lata', 2, { name: 'Coca-Cola lata', unitPrice: 6 }),
+      ],
+      payment: { method: 'pix', changeFor: null }, status: 'entregue', etaMin: 35,
+      createdAt: at(0, 19, 10),
+      timeline: [
+        { status: 'novo', at: at(0, 19, 10) },
+        { status: 'preparo', at: at(0, 19, 16) },
+        { status: 'entrega', at: at(0, 19, 34) },
+        { status: 'entregue', at: at(0, 19, 52) },
+      ],
+      rating: { stars: 5, comment: 'Chegou quentinho!' },
+    }),
+    mkOrder({
+      code: 'R-1043', customerId: 'cus_joao', customerName: 'João Marcos', phone: '(34) 99999-1002',
+      type: 'delivery', zoneId: 'z2', deliveryFee: 7,
+      address: { street: 'Av. Central, 45', ref: '', zoneId: 'z2' },
+      items: [
+        line('it_completo', 2, { name: 'Completo', unitPrice: 18, summary: 'Asinha' }),
+        line('it_caldo', 1, { name: 'Caldo', unitPrice: 15, summary: 'Frango + Costela · Queijo' }),
+      ],
+      payment: { method: 'dinheiro', changeFor: 100 }, status: 'preparo', etaMin: 45,
+      createdAt: at(0, 20, 5),
+      timeline: [
+        { status: 'novo', at: at(0, 20, 5) },
+        { status: 'preparo', at: at(0, 20, 9) },
+      ],
+    }),
+    // Alguns pedidos de dias anteriores para o financeiro/ranking
+    mkOrder({
+      code: 'R-1030', customerName: 'Balcão', source: 'local', type: 'pickup',
+      items: [line('it_esp_contra_file', 4, { name: 'Contra filé', unitPrice: 12 })],
+      payment: { method: 'dinheiro', changeFor: null }, status: 'entregue', etaMin: 0,
+      createdAt: at(1, 20, 30), timeline: [{ status: 'novo', at: at(1, 20, 30) }, { status: 'entregue', at: at(1, 20, 40) }],
+    }),
+    mkOrder({
+      code: 'R-1031', customerName: 'Carlos', type: 'delivery', zoneId: 'z1', deliveryFee: 5,
+      address: { street: 'Rua 7, 88', ref: '', zoneId: 'z1' },
+      items: [line('it_jantinha', 2, { name: 'Jantinha completa', unitPrice: 25, summary: 'Frango com bacon · Feijão de caldo' })],
+      payment: { method: 'cartao', changeFor: null }, status: 'entregue', etaMin: 40,
+      createdAt: at(2, 19, 50), timeline: [{ status: 'novo', at: at(2, 19, 50) }, { status: 'entregue', at: at(2, 20, 40) }],
+      rating: { stars: 4, comment: '' },
+    }),
+    mkOrder({
+      code: 'R-1032', customerName: 'Balcão', source: 'local', type: 'pickup',
+      items: [line('it_caldo', 3, { name: 'Caldo', unitPrice: 15, summary: 'Costela' })],
+      payment: { method: 'pix', changeFor: null }, status: 'entregue', etaMin: 0,
+      createdAt: at(3, 21, 10), timeline: [{ status: 'novo', at: at(3, 21, 10) }, { status: 'entregue', at: at(3, 21, 20) }],
+    }),
   ]
 
-  const appointments = [
-    { id: uid('apt'), clientId: 'cli_1', clientName: 'João Pedro', barberId: 'usr_owner', serviceIds: ['srv_cabelo'], datetime: inHours(2), status: 'agendado', notes: '' },
-    { id: uid('apt'), clientId: 'cli_2', clientName: 'Marcos Vinícius', barberId: 'usr_rafa', serviceIds: ['srv_barba'], datetime: inHours(3), status: 'agendado', notes: '' },
-    { id: uid('apt'), clientId: 'cli_4', clientName: 'Lucas Ferreira', barberId: 'usr_owner', serviceIds: ['srv_cabelo_barba', 'srv_sobr'], datetime: inHours(5), status: 'agendado', notes: 'Confirmar por WhatsApp' },
+  const cashMovements = [
+    { id: uid('sng'), type: 'sangria', amount: 50, reason: 'Troco', at: at(0, 21, 0) },
   ]
 
-  const queue = [
-    { id: uid('q'), clientName: 'Cliente sem agendamento', barberId: 'usr_bruno', status: 'aguardando', createdAt: daysAgo(0, new Date().getHours(), 5) },
-  ]
-
-  const expenses = [
-    { id: uid('exp'), description: 'Aluguel', category: 'Fixo', amount: 2500, date: daysAgo(2, 9) },
-    { id: uid('exp'), description: 'Conta de luz', category: 'Utilidades', amount: 380, date: daysAgo(3, 9) },
-    { id: uid('exp'), description: 'Conta de água', category: 'Utilidades', amount: 120, date: daysAgo(3, 9) },
-    { id: uid('exp'), description: 'Reposição de produtos', category: 'Estoque', amount: 640, date: daysAgo(6, 9) },
-  ]
-
-  const goals = [
-    { id: uid('goal'), monthKey: monthKeyFrom(now), target: 15000, label: 'Meta de faturamento' },
-  ]
-
-  const cashSessions = [
-    { id: uid('cash'), date: daysAgo(0, 8), opening: 200, closing: null, status: 'aberto', openedBy: 'usr_owner', notes: '' },
-  ]
-
-  const daysOff = [
-    { id: uid('off'), barberId: 'usr_bruno', date: daysAgo(-3, 0), reason: 'Folga programada' },
-  ]
-
-  const gallery = [
-    { id: uid('gal'), barberId: 'usr_owner', clientId: 'cli_1', clientName: 'João Pedro', note: 'Degradê + barba', before: '', after: '', date: daysAgo(3, 12) },
+  const messages = [
+    { id: uid('msg'), customerId: 'cus_ana', name: 'Ana Paula', text: 'Vocês têm espeto de linguiça hoje?', from: 'customer', at: at(0, 18, 55), read: false },
   ]
 
   return {
-    users,
     categories,
-    services,
-    clients,
-    transactions,
-    appointments,
-    queue,
-    expenses,
-    goals,
-    cashSessions,
-    daysOff,
-    gallery,
-    settings: {
-      shopName: 'João Victor Barbershop',
-      productDefaultPct: 20,
-      catalogVersion: CATALOG_VERSION,
-    },
+    items,
+    customers,
+    orders,
+    cashMovements,
+    messages,
+    settings: defaultSettings(),
+    seq: 1044, // próximo número de pedido (código R-####)
   }
-}
-
-// Versão do catálogo. Ao incrementar, a migração aplica o catálogo novo aos
-// aparelhos que já têm o app instalado (ver DataContext.migrate).
-export const CATALOG_VERSION = 2
-
-// Catálogo real da barbearia (somente serviços — sem produtos por enquanto).
-// Comissão do barbeiro por categoria (a barbearia fica com o restante).
-export function buildCatalog() {
-  const categories = [
-    { id: 'cat_corte', name: 'Cortes', type: 'service', barberPct: 50 },
-    { id: 'cat_barba', name: 'Barba', type: 'service', barberPct: 50 },
-    { id: 'cat_sobr', name: 'Sobrancelha', type: 'service', barberPct: 50 },
-    { id: 'cat_alis', name: 'Alisamento', type: 'service', barberPct: 50 },
-    { id: 'cat_outros', name: 'Outros', type: 'service', barberPct: 50 },
-  ]
-  const svc = (id, name, categoryId, price) => ({
-    id,
-    name,
-    categoryId,
-    price,
-    active: true,
-    allowedBarberIds: [],
-  })
-  const services = [
-    svc('srv_cabelo', 'Cabelo', 'cat_corte', 40),
-    svc('srv_barba', 'Barba', 'cat_barba', 35),
-    svc('srv_cabelo_sobr', 'Cabelo sobrancelha', 'cat_corte', 50),
-    svc('srv_cabelo_barba', 'Cabelo e barba', 'cat_corte', 70),
-    svc('srv_corte_alis', 'Corte com alisamento', 'cat_alis', 110),
-    svc('srv_corte_alis_barba', 'Corte alisamento barba', 'cat_alis', 140),
-    svc('srv_alis', 'Alisamento', 'cat_alis', 80),
-    svc('srv_sobr', 'Sobrancelha', 'cat_sobr', 10),
-    svc('srv_pigment', 'Pigmentação', 'cat_outros', 25),
-  ]
-  return { categories, services }
-}
-
-function monthKeyFrom(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }

@@ -3,95 +3,100 @@ import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { usePWA } from '../context/PWAContext.jsx'
 import { showLocalNotification } from '../lib/notifications.js'
-import { fmtDateTime, todayISO, serviceNamesOf } from '../lib/utils.js'
+import { STATUS_META, minutesLate } from '../lib/orders.js'
 
 /**
- * Dispara notificações do sistema operacional (não toasts) para eventos reais:
- *  - Barbeiro: novo agendamento atribuído a ele.
- *  - Dono: caixa aberto pendente de fechamento.
+ * Dispara notificações do sistema (não toasts) para eventos reais:
+ *  - Cliente: mudança de status do SEU pedido (com destaque para "saiu para
+ *    entrega") + aviso automático de atraso.
+ *  - Gestor: novo pedido recebido pelo app.
  *
- * Deduplicação persistida em localStorage para não repetir avisos.
- * Observação: sem backend, os disparos acontecem no mesmo dispositivo quando o
- * app está aberto/em segundo plano. Para push do servidor com o app fechado ou
- * em outro aparelho, veja o scaffolding em src/lib/notifications.js (Web Push).
+ * Sem backend, os disparos acontecem no próprio dispositivo com o app aberto/em
+ * segundo plano. Para push com o app fechado, ver scaffolding em
+ * src/lib/notifications.js (Web Push).
  */
 export default function NotificationEngine() {
-  const { db, serviceById } = useData()
-  const { user } = useAuth()
-  const { permission, standalone } = usePWA()
-  const initedFor = useRef(null)
-
+  const { db } = useData()
+  const { customer, isManager } = useAuth()
+  const { permission } = usePWA()
   const enabled = permission === 'granted'
 
-  // ---- Novo agendamento para o usuário logado ----
-  useEffect(() => {
-    if (!user) return
-    const key = `barber.notif.appts.${user.id}`
-    const readSeen = () => {
-      try {
-        return new Set(JSON.parse(localStorage.getItem(key) || '[]'))
-      } catch {
-        return new Set()
-      }
-    }
-    const mine = db.appointments.filter((a) => a.barberId === user.id && a.status !== 'cancelado')
+  const lastStatus = useRef({}) // orderId -> status
+  const inited = useRef(false)
+  const managerSeen = useRef(new Set())
+  const managerInited = useRef(false)
+  const delayNotified = useRef(new Set())
 
-    // Primeira montagem para este usuário: registra o estado atual sem notificar
-    if (initedFor.current !== user.id) {
-      initedFor.current = user.id
-      localStorage.setItem(key, JSON.stringify(mine.map((a) => a.id)))
+  // ---- Cliente: mudança de status do próprio pedido ----
+  useEffect(() => {
+    if (!customer) return
+    const mine = db.orders.filter((o) => o.customerId === customer.id)
+    if (!inited.current) {
+      inited.current = true
+      for (const o of mine) lastStatus.current[o.id] = o.status
       return
     }
-
-    const seen = readSeen()
-    const fresh = mine.filter((a) => !seen.has(a.id))
-    if (fresh.length && enabled) {
-      for (const a of fresh) {
-        const names = serviceNamesOf(a, db.services)
-        showLocalNotification('Novo agendamento 📅', {
-          body: `${a.clientName} — ${names.join(' + ') || 'serviço'} em ${fmtDateTime(a.datetime)}`,
-          tag: `appt-${a.id}`,
-          data: { url: '/agenda' },
+    for (const o of mine) {
+      const prev = lastStatus.current[o.id]
+      if (prev && prev !== o.status && enabled) {
+        const meta = STATUS_META[o.status]
+        const body =
+          o.status === 'entrega' ? `${o.code} saiu para entrega! Chega quentinho 🛵`
+            : o.status === 'entregue' ? `${o.code} entregue. Bom apetite! 😋`
+              : o.status === 'preparo' ? `${o.code} está sendo preparado 🔥`
+                : `${o.code}: ${meta?.label}`
+        showLocalNotification(`${meta?.emoji || '🔔'} ${meta?.clientLabel || 'Pedido atualizado'}`, {
+          body, tag: `order-${o.id}`, data: { url: `/pedido/${o.id}` },
+          requireInteraction: o.status === 'entrega',
         })
       }
+      lastStatus.current[o.id] = o.status
     }
-    // Atualiza o registro de vistos (mesmo sem permissão, para não acumular)
-    localStorage.setItem(key, JSON.stringify(mine.map((a) => a.id)))
-  }, [db.appointments, user, enabled, db.services])
+  }, [db.orders, customer, enabled])
 
-  // ---- Caixa pendente de fechamento (apenas dono) ----
+  // ---- Gestor: novo pedido pelo app ----
   useEffect(() => {
-    if (!user || user.role !== 'owner' || !enabled) return
-
-    const check = () => {
-      const open = db.cashSessions.find((c) => c.status === 'aberto')
-      if (!open) return
-      const key = 'barber.notif.cash'
-      let notified = {}
-      try {
-        notified = JSON.parse(localStorage.getItem(key) || '{}')
-      } catch {
-        notified = {}
-      }
-      const stamp = `${open.id}:${todayISO()}`
-      const openedAgoH = (Date.now() - new Date(open.date)) / 3600000
-      const hour = new Date().getHours()
-      if ((openedAgoH >= 6 || hour >= 20) && !notified[stamp]) {
-        showLocalNotification('Caixa pendente 💰', {
-          body: 'Você tem um caixa aberto sem fechamento. Toque para revisar e fechar.',
-          tag: 'cash-open',
-          requireInteraction: true,
-          data: { url: '/caixa' },
-        })
-        notified[stamp] = true
-        localStorage.setItem(key, JSON.stringify(notified))
+    if (!isManager) return
+    const appOrders = db.orders.filter((o) => o.source === 'app')
+    if (!managerInited.current) {
+      managerInited.current = true
+      appOrders.forEach((o) => managerSeen.current.add(o.id))
+      return
+    }
+    for (const o of appOrders) {
+      if (!managerSeen.current.has(o.id)) {
+        managerSeen.current.add(o.id)
+        if (enabled) {
+          showLocalNotification('🧾 Novo pedido!', {
+            body: `${o.code} · ${o.customerName} · ${o.items.reduce((s, i) => s + i.qty, 0)} item(ns)`,
+            tag: `neworder-${o.id}`, data: { url: '/gestor/pedidos' }, requireInteraction: true,
+          })
+        }
       }
     }
+  }, [db.orders, isManager, enabled])
 
+  // ---- Aviso automático de atraso (para o cliente do pedido) ----
+  useEffect(() => {
+    if (!customer) return
+    const check = () => {
+      const over = db.settings?.delayNotice?.minutesOver ?? 15
+      const mine = db.orders.filter((o) => o.customerId === customer.id)
+      for (const o of mine) {
+        const late = minutesLate(o)
+        if (late >= over && !delayNotified.current.has(o.id) && enabled) {
+          delayNotified.current.add(o.id)
+          showLocalNotification('🙏 Um instante', {
+            body: db.settings?.delayNotice?.text || 'Seu pedido está a caminho, agradecemos a paciência!',
+            tag: `delay-${o.id}`, data: { url: `/pedido/${o.id}` },
+          })
+        }
+      }
+    }
     check()
-    const id = setInterval(check, 10 * 60 * 1000) // revalida a cada 10 min
-    return () => clearInterval(id)
-  }, [db.cashSessions, user, enabled, standalone])
+    const t = setInterval(check, 60000)
+    return () => clearInterval(t)
+  }, [db.orders, db.settings, customer, enabled])
 
   return null
 }

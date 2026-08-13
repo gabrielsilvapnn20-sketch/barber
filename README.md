@@ -1,144 +1,110 @@
-# 💈 Barbearia — Sistema de Gestão
+# 🍢 Lanchonete Rodrigues — App de Pedidos & Gestão (PWA)
 
-App de gestão completo para barbearias: agenda, comissões configuráveis, financeiro,
-controle de equipe, fila de espera, caixa, portfólio e muito mais. Mobile-first, PWA
-instalável, com tema claro/escuro.
+Substituto real do "ligar para pedir": um PWA de delivery de **espetinho e jantinha**
+que junta duas experiências num só app — o **cliente** pede rápido, com fotos e
+acompanhamento em tempo real, e o **gestor** controla o negócio inteiro (pedidos,
+estoque, caixa e financeiro) do celular ou tablet.
 
-![stack](https://img.shields.io/badge/React-18-149ECA) ![vite](https://img.shields.io/badge/Vite-5-646CFF) ![tailwind](https://img.shields.io/badge/Tailwind-3-38BDF8) ![pwa](https://img.shields.io/badge/PWA-instalável-0EA5E9)
+![stack](https://img.shields.io/badge/React-18-149ECA) ![vite](https://img.shields.io/badge/Vite-5-646CFF) ![tailwind](https://img.shields.io/badge/Tailwind-3-F5A800) ![pwa](https://img.shields.io/badge/PWA-instal%C3%A1vel-D1202F)
 
-## ✨ Funcionalidades
+Identidade visual da marca: **amarelo** como base (apetite), **vermelho/bordô** nos CTAs
+e destaques, **azul** de apoio. Mobile-first, tema claro/escuro.
 
-### 🔐 Login e perfis
-- **Dono (Admin):** acesso total — dashboard geral, financeiro, equipe e configurações.
-- **Barbeiro:** acesso restrito — apenas sua agenda, ganhos e serviços liberados.
-- **PIN de 4 dígitos** para acesso rápido no dia a dia.
-- Recuperação de senha por e-mail ou WhatsApp (fluxo simulado).
+## ✨ Duas experiências, um app
 
-### 📊 Dashboard do Dono
-- Cards de métricas: faturamento total, ganhos pessoais, repasse dos barbeiros e venda de produtos.
-- Gráfico de faturamento (dia / semana / mês).
-- Ranking de barbeiros do mês.
-- Agenda do dia com todos os barbeiros.
-- Acompanhamento de metas e lucro estimado.
+### 👤 Cliente (loja)
+- **Cardápio visual** por categoria, com fotos (ou blocos apetitosos com emoji) e preço.
+- **Montagem por categoria** — cada tipo tem sua própria lógica, definida como **dado**
+  (não código fixo), pronta para replicar em lanchonete/pizzaria:
+  - **Espetos avulsos** e **bebidas** → item simples (só quantidade).
+  - **Jantinha completa** → escolhe espeto + tipo de feijão (tropeiro/caldo);
+    acompanhamentos fixos (arroz, purê, bolinho de milho, salada, mandioca).
+  - **Completo** → escolhe espeto; acompanha feijão tropeiro, mandioca e tomate.
+  - **Caldos** → escolhe o sabor, com opção de **misturar dois** (ex.: metade frango +
+    metade costela) e adicionais (queijo, cebolinha).
+- **Esgotado** aparece desabilitado (“Esgotado por hoje”), não some do cardápio.
+- **Carrinho** com edição, **upsell contextual** (sugere bebida / vira jantinha).
+- **Checkout** sem barreira: login só com nome + telefone; entrega por bairro (taxa/ETA)
+  ou **retirada no local** (sem taxa); pagamento PIX / cartão / **dinheiro com troco**.
+- **Acompanhamento em tempo real** com linha do tempo (Recebido → Preparo →
+  Saiu para entrega → Entregue) e **aviso automático de atraso**.
+- **Fidelidade** (cartão de selos configurável), **conquistas**, **favoritos**,
+  **pedir de novo** em 1 toque, **avaliação** pós-entrega e **canal de suporte**.
 
-### 💰 Comissões 100% configuráveis
-- O dono cria **categorias** (serviço ou produto) e define o **split** por porcentagem
-  via slider (ex.: Corte 50/50, Sobrancelha 60/40, Pomadas 20/80).
-- Cada lançamento guarda um *snapshot* da comissão no momento da venda.
-
-### 👨‍🔧 Dashboard do Barbeiro
-- Ganhos do dia/semana/mês já com o split calculado.
-- Histórico de atendimentos e clientes recorrentes (CRM).
-- Apenas os serviços liberados pelo dono aparecem para lançamento.
-
-### 📋 Extras
-| Recurso | Descrição |
-|---|---|
-| 🪞 Fila de espera | Cliente chega → entra na fila → barbeiro chama |
-| 📅 Agendamentos | Calendário por barbeiro, com status |
-| 💸 Caixa do dia | Abertura/fechamento com saldo esperado |
-| 📤 Relatórios | Exportação em **PDF** (impressão) e **Excel/CSV** |
-| 🏖️ Folgas | Registro de dias de folga por barbeiro |
-| 🔔 Lembretes | Aniversários, retornos e reativação de clientes (com atalho WhatsApp) |
-| 📸 Antes/Depois | Galeria/portfólio dos cortes |
-| 🌐 PWA | Instalável no celular, funciona offline |
-| 🌙 Tema | Alternância claro/escuro |
+### 🛠️ Gestor (painel, acesso por senha)
+- **Painel**: faturamento, ticket médio, mais vendidos, horário de pico, hoje × ontem,
+  fila atual e vendas por forma de pagamento.
+- **Pedidos em tempo real**: fila por status; “confirmar saída para entrega” avisa o
+  cliente; destaque para atrasados.
+- **Estoque**: marca item como esgotado/disponível em 1 toque (reflete na hora no cardápio).
+- **Financeiro**: faturamento por dia/semana/mês, por PIX/cartão/dinheiro, **app × local**,
+  exportação **PDF/CSV**.
+- **Caixa**: **sangria** (retirada com valor/hora/motivo) e **consumo local** (lançamento
+  presencial), para o caixa fechar batendo com o dia inteiro (app + balcão).
+- **Mensagens**: central de suporte com resposta ao cliente.
+- **Configurações**: nome, horário de funcionamento, fidelidade, taxas por bairro,
+  mensagem de atraso, promoção do dia e senha do painel.
 
 ## 🚀 Como rodar
 
 ```bash
 npm install
-npm run dev      # ambiente de desenvolvimento (http://localhost:5173)
+npm run dev      # desenvolvimento (http://localhost:5173)
 npm run build    # build de produção em /dist
 npm run preview  # pré-visualização do build
 ```
 
-## 👤 Acessos de demonstração
+## 👤 Acessos
 
-A tela de login lista os usuários de demonstração. Você também pode entrar pelo PIN.
+- **Cliente:** basta navegar. O login (nome + telefone) só é pedido ao finalizar o pedido.
+- **Gestor:** menu **Conta → “Sou o dono”** ou acesse `/gestor`. Senha padrão de
+  demonstração: **`123456`** (altere em Configurações).
 
-| Usuário | Perfil | E-mail | Senha | PIN |
-|---|---|---|---|---|
-| Carlos Mendes | Dono | dono@barbearia.com | 123456 | 1234 |
-| Rafael Souza | Barbeiro | rafael@barbearia.com | 123456 | 2222 |
-| Bruno Lima | Barbeiro | bruno@barbearia.com | 123456 | 3333 |
+## 📲 PWA e Notificações
 
-## 📲 Instalação (PWA) e Notificações
-
-O app é um **PWA instalável** e roda em **modo standalone** (tela cheia, sem barra do
-navegador). Ao abrir sem estar instalado, uma tela guia a instalação com passos por
-plataforma — a instalação é tratada como parte **obrigatória** da experiência.
+O app é um **PWA instalável** que roda em **modo standalone** (tela cheia). Ao abrir sem
+estar instalado, uma tela guia a instalação por plataforma.
 
 - **Manifest** (`display: standalone`, ícones 192/512 `any`+`maskable`, `shortcuts`) é
   gerado pelo `vite-plugin-pwa` a partir do `vite.config.js`.
-- **Service Worker** customizado em `src/sw.js` (estratégia `injectManifest`): faz o
-  precache offline (Workbox) e trata `push`, `notificationclick` e mensagens da página.
-- Registrado em `src/main.jsx` via `virtual:pwa-register`.
-
-### Como instalar
-
-- **Android / Chrome / Edge:** botão “Instalar agora” (usa o evento `beforeinstallprompt`)
-  ou menu ⋮ → “Instalar aplicativo”.
-- **iPhone / iPad (Safari):** Compartilhar → **“Adicionar à Tela de Início”**.
-  ⚠️ No iOS, notificações só funcionam com o app **instalado** (iOS **16.4+**).
-
-### Notificações
-
-Dois modos, cobrindo os avisos pedidos (novo agendamento → barbeiro; caixa pendente → dono):
+- **Service Worker** customizado (`src/sw.js`, estratégia `injectManifest`): precache
+  offline (Workbox) e tratamento de `push`, `notificationclick` e mensagens da página.
 
 | Modo | Precisa de servidor? | O que faz |
 |---|---|---|
-| **Locais** (ativo hoje) | Não | O `NotificationEngine` observa os dados e pede ao Service Worker para exibir uma notificação do SO (`showNotification`) — funciona no dispositivo com o app aberto/em segundo plano. |
-| **Web Push** (scaffolding) | Sim | Assina o navegador com a chave **VAPID** (`subscribeToPush`) e o `push` handler no SW exibe a notificação enviada pelo servidor — funciona com o app fechado / em outro aparelho. |
+| **Locais** (ativo) | Não | O `NotificationEngine` observa os pedidos e dispara notificações do SO: mudança de status pro cliente (com destaque em “saiu para entrega”), aviso de atraso e **novo pedido** pro gestor. |
+| **Web Push** (scaffolding) | Sim | Assina o navegador com a chave **VAPID** e o `push` handler no SW exibe a notificação enviada pelo servidor — funciona com o app fechado / em outro aparelho. |
 
-Para **Web Push real** (envio pelo servidor):
+Para Web Push real: gere as chaves com `node scripts/gen-vapid.mjs`, coloque a pública em
+`VAPID_PUBLIC_KEY` (`src/lib/notifications.js`), guarde a privada no backend e envie os
+avisos (ex.: Supabase Edge Function com `web-push`) usando as `PushSubscription`.
 
-1. Gere seu par de chaves: `node scripts/gen-vapid.mjs`
-2. Coloque a **pública** em `VAPID_PUBLIC_KEY` (`src/lib/notifications.js`) e a **privada**
-   numa variável de ambiente no backend (nunca no repo).
-3. Guarde as `PushSubscription` dos usuários (ex.: tabela no Supabase) e envie os avisos
-   a partir de uma **Supabase Edge Function** usando a lib `web-push`:
+## 🎨 Tecnologia e dados
 
-```ts
-// supabase/functions/send-push/index.ts (exemplo)
-import webpush from 'npm:web-push'
-webpush.setVapidDetails('mailto:voce@barbearia.com', Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!)
-// para cada subscription do destinatário:
-await webpush.sendNotification(subscription, JSON.stringify({
-  title: 'Novo agendamento 📅', body: 'João — Corte às 15:00', url: '/agenda',
-}))
-```
-
-## 🎨 Tecnologia
-
-- **React + Vite + Tailwind CSS** — leve, rápido e moderno.
-- **Recharts** — gráficos responsivos.
-- **PWA** (`vite-plugin-pwa`) — instalável e offline-first.
-- **Camada de dados local** — os dados são persistidos em `localStorage`, então o app
-  funciona 100% sem backend. A modelagem (usuários, categorias, serviços, transações,
-  agendamentos, fila, despesas, metas, caixa, folgas, galeria) segue o formato de
-  tabelas relacionais, facilitando a migração futura para o **Supabase**.
-
-### Migrando para o Supabase
-
-Toda a leitura/escrita passa pelo `DataContext` (`src/context/DataContext.jsx`). Para
-usar um backend real, basta substituir as operações locais (`addTo`, `patch`, `remove`,
-`addTransaction`) por chamadas ao cliente Supabase, mantendo a mesma forma dos objetos
-descrita em `src/lib/seed.js`. Os seletores de métricas (`ownerMetrics`, `barberMetrics`,
-`rankingThisMonth`) permanecem inalterados.
+- **React + Vite + Tailwind CSS**, **Recharts** para gráficos, **PWA** offline-first.
+- **Camada de dados local** (`localStorage`) via `DataContext` — funciona 100% sem
+  backend. Catálogo, pedidos, clientes, caixa e mensagens seguem um formato relacional,
+  facilitando a migração futura para o **Supabase**: basta trocar `addTo/patch/remove/
+  placeOrder/...` por chamadas ao cliente Supabase, mantendo a forma dos objetos de
+  `src/lib/seed.js`. As métricas (`financeMetrics`, `itemRanking`, `peakHours`) seguem iguais.
+- **Auditável:** cada pedido guarda `code`, itens (com preço/escolhas no momento),
+  `timeline` de status e forma de pagamento; sangrias e consumo local ficam registrados —
+  o número do dashboard reflete o que aconteceu.
 
 ## 📁 Estrutura
 
 ```
 src/
-├── components/     # UI reutilizável (Layout, ui.jsx, Icons)
-├── context/        # Auth, Data (store), Theme, Toast
-├── lib/            # utils, seed (dados iniciais), reports (PDF/CSV)
-├── pages/          # telas (dashboards, agenda, financeiro, ...)
-├── App.jsx         # rotas + controle de acesso por perfil
-└── main.jsx        # bootstrap + providers
+├── components/       # UI (ClientLayout, ManagerLayout, ItemBuilder, FoodUI, ui, Icons)
+├── context/          # Data (store), Auth (guest/cliente/gestor), Cart, Theme, Toast, PWA
+├── lib/              # utils, orders (regras de status/montagem), seed (catálogo), reports
+├── pages/
+│   ├── client/       # Menu, Cart, Checkout, OrderTracking, Orders, Account
+│   └── manager/      # Dashboard, OrdersBoard, Stock, Finance, CashBox, Messages, Settings
+├── App.jsx           # rotas (loja × painel) e gate do gestor
+└── main.jsx          # bootstrap + providers
 ```
 
 ---
 
-Feito para ser instalado no celular e usado no balcão da barbearia. 💈
+Feito para instalar no celular do cliente e no tablet do balcão. 🍢🔥

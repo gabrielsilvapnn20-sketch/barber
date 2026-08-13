@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
 const ThemeContext = createContext(null)
-const KEY = 'barber.theme'
+const KEY = 'lr.theme'
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
@@ -16,7 +16,7 @@ export function ThemeProvider({ children }) {
     else root.classList.remove('dark')
     localStorage.setItem(KEY, theme)
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b1220' : '#0ea5e9')
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#1a1206' : '#f5a800')
   }, [theme])
 
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))

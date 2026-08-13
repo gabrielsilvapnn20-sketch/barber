@@ -49,7 +49,7 @@ export function exportPDF({ title, shopName, period, summary, rows }) {
   <style>
     *{box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
     body{margin:0;padding:32px;color:#0f172a}
-    header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0ea5e9;padding-bottom:16px;margin-bottom:24px}
+    header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #d1202f;padding-bottom:16px;margin-bottom:24px}
     h1{margin:0;font-size:22px}
     .muted{color:#64748b;font-size:13px;margin-top:4px}
     .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
@@ -68,7 +68,7 @@ export function exportPDF({ title, shopName, period, summary, rows }) {
     </header>
     <div class="stats">${summaryHtml}</div>
     <table><thead><tr>${head.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
-    <footer>Relatório gerado pelo sistema de gestão da barbearia</footer>
+    <footer>Relatório gerado pelo painel da Lanchonete Rodrigues</footer>
     <script>window.onload=()=>{setTimeout(()=>window.print(),300)}</script>
   </body></html>`)
   win.document.close()

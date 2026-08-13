@@ -9,7 +9,7 @@ import {
 } from '../lib/notifications.js'
 
 const PWAContext = createContext(null)
-const DISMISS_KEY = 'barber.installBannerDismissed'
+const DISMISS_KEY = 'lr.installBannerDismissed'
 
 export function PWAProvider({ children }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
