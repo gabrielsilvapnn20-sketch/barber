@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
-import { buildSeed } from '../lib/seed.js'
+import { buildSeed, buildCatalog, CATALOG_VERSION } from '../lib/seed.js'
 import { uid, isSameDay, isSameMonth, monthKey } from '../lib/utils.js'
 
 const DataContext = createContext(null)
@@ -12,6 +12,14 @@ function migrate(db) {
   // um nome personalizado que o usuário já tenha definido.
   if (!db.settings.shopName || db.settings.shopName === 'Barbearia Navalha de Ouro') {
     db.settings.shopName = 'João Victor Barbershop'
+  }
+  // Aplica o catálogo real de serviços a instalações antigas (uma vez por
+  // versão). Não mexe em lançamentos já feitos (eles guardam nome/preço).
+  if (db.settings.catalogVersion !== CATALOG_VERSION) {
+    const { categories, services } = buildCatalog()
+    db.categories = categories
+    db.services = services
+    db.settings.catalogVersion = CATALOG_VERSION
   }
   return db
 }

@@ -52,30 +52,8 @@ export function buildSeed() {
 
   const users = [owner, barber2, barber3]
 
-  // Categories with configurable barber percentage (shop keeps the rest)
-  const categories = [
-    { id: 'cat_corte', name: 'Corte de cabelo', type: 'service', barberPct: 50 },
-    { id: 'cat_barba', name: 'Barba', type: 'service', barberPct: 50 },
-    { id: 'cat_sobr', name: 'Sobrancelha', type: 'service', barberPct: 60 },
-    { id: 'cat_trat', name: 'Tratamentos capilares', type: 'service', barberPct: 50 },
-    { id: 'cat_pomada', name: 'Pomadas', type: 'product', barberPct: 20 },
-    { id: 'cat_shampoo', name: 'Shampoos/condicionadores', type: 'product', barberPct: 15 },
-    { id: 'cat_barbaprod', name: 'Produtos para barba', type: 'product', barberPct: 20 },
-  ]
-
-  // Services & products. allowedBarberIds empty => available to all barbers.
-  const services = [
-    { id: 'srv_corte', name: 'Corte masculino', categoryId: 'cat_corte', price: 45, active: true, allowedBarberIds: [] },
-    { id: 'srv_corteinf', name: 'Corte infantil', categoryId: 'cat_corte', price: 35, active: true, allowedBarberIds: [] },
-    { id: 'srv_degrade', name: 'Degradê navalhado', categoryId: 'cat_corte', price: 55, active: true, allowedBarberIds: [] },
-    { id: 'srv_barba', name: 'Barba completa', categoryId: 'cat_barba', price: 35, active: true, allowedBarberIds: [] },
-    { id: 'srv_barbaterapia', name: 'Barboterapia', categoryId: 'cat_barba', price: 50, active: true, allowedBarberIds: ['usr_owner', 'usr_rafa'] },
-    { id: 'srv_sobr', name: 'Sobrancelha', categoryId: 'cat_sobr', price: 20, active: true, allowedBarberIds: [] },
-    { id: 'srv_hidra', name: 'Hidratação capilar', categoryId: 'cat_trat', price: 60, active: true, allowedBarberIds: [] },
-    { id: 'prod_pomada', name: 'Pomada modeladora', categoryId: 'cat_pomada', price: 40, active: true, allowedBarberIds: [] },
-    { id: 'prod_shampoo', name: 'Shampoo anticaspa', categoryId: 'cat_shampoo', price: 35, active: true, allowedBarberIds: [] },
-    { id: 'prod_oleo', name: 'Óleo para barba', categoryId: 'cat_barbaprod', price: 45, active: true, allowedBarberIds: [] },
-  ]
+  // Catálogo real de serviços (categorias + serviços)
+  const { categories, services } = buildCatalog()
 
   const clients = [
     { id: 'cli_1', name: 'João Pedro', phone: '(11) 98888-1111', birthday: '1990-08-12', barberId: 'usr_owner', notes: 'Gosta de degradê baixo' },
@@ -111,34 +89,34 @@ export function buildSeed() {
 
   const transactions = [
     // Today
-    tx('usr_owner', 'srv_corte', 'cli_1', daysAgo(0, 9, 30)),
+    tx('usr_owner', 'srv_cabelo', 'cli_1', daysAgo(0, 9, 30)),
     tx('usr_owner', 'srv_barba', 'cli_1', daysAgo(0, 9, 45)),
-    tx('usr_owner', 'srv_degrade', 'cli_4', daysAgo(0, 11, 0)),
-    tx('usr_rafa', 'srv_corte', 'cli_2', daysAgo(0, 10, 15)),
-    tx('usr_rafa', 'prod_pomada', 'cli_2', daysAgo(0, 10, 30)),
-    tx('usr_bruno', 'srv_degrade', 'cli_3', daysAgo(0, 13, 0)),
+    tx('usr_owner', 'srv_cabelo_barba', 'cli_4', daysAgo(0, 11, 0)),
+    tx('usr_rafa', 'srv_cabelo', 'cli_2', daysAgo(0, 10, 15)),
+    tx('usr_rafa', 'srv_sobr', 'cli_2', daysAgo(0, 10, 30)),
+    tx('usr_bruno', 'srv_corte_alis', 'cli_3', daysAgo(0, 13, 0)),
     tx('usr_bruno', 'srv_sobr', 'cli_3', daysAgo(0, 13, 20)),
     // Yesterday
-    tx('usr_owner', 'srv_corte', 'cli_4', daysAgo(1, 10)),
+    tx('usr_owner', 'srv_cabelo', 'cli_4', daysAgo(1, 10)),
     tx('usr_rafa', 'srv_barba', 'cli_5', daysAgo(1, 14)),
-    tx('usr_rafa', 'srv_corte', 'cli_5', daysAgo(1, 14, 30)),
-    tx('usr_bruno', 'prod_oleo', 'cli_3', daysAgo(1, 16)),
+    tx('usr_rafa', 'srv_cabelo_sobr', 'cli_5', daysAgo(1, 14, 30)),
+    tx('usr_bruno', 'srv_pigment', 'cli_3', daysAgo(1, 16)),
     // Earlier this month
-    tx('usr_owner', 'srv_degrade', 'cli_1', daysAgo(3, 11)),
-    tx('usr_owner', 'srv_corte', 'cli_4', daysAgo(4, 15)),
-    tx('usr_rafa', 'srv_hidra', 'cli_2', daysAgo(5, 10)),
-    tx('usr_rafa', 'srv_corte', 'cli_2', daysAgo(6, 12)),
-    tx('usr_bruno', 'srv_corte', 'cli_3', daysAgo(7, 9)),
+    tx('usr_owner', 'srv_cabelo_barba', 'cli_1', daysAgo(3, 11)),
+    tx('usr_owner', 'srv_cabelo', 'cli_4', daysAgo(4, 15)),
+    tx('usr_rafa', 'srv_alis', 'cli_2', daysAgo(5, 10)),
+    tx('usr_rafa', 'srv_cabelo', 'cli_2', daysAgo(6, 12)),
+    tx('usr_bruno', 'srv_cabelo', 'cli_3', daysAgo(7, 9)),
     tx('usr_bruno', 'srv_barba', 'cli_3', daysAgo(8, 17)),
-    tx('usr_owner', 'prod_shampoo', 'cli_1', daysAgo(9, 11)),
-    tx('usr_rafa', 'srv_degrade', 'cli_5', daysAgo(10, 13)),
-    tx('usr_bruno', 'srv_corte', 'cli_3', daysAgo(12, 16)),
+    tx('usr_owner', 'srv_corte_alis_barba', 'cli_1', daysAgo(9, 11)),
+    tx('usr_rafa', 'srv_cabelo_barba', 'cli_5', daysAgo(10, 13)),
+    tx('usr_bruno', 'srv_cabelo', 'cli_3', daysAgo(12, 16)),
   ]
 
   const appointments = [
-    { id: uid('apt'), clientId: 'cli_1', clientName: 'João Pedro', barberId: 'usr_owner', serviceId: 'srv_corte', datetime: inHours(2), status: 'agendado', notes: '' },
-    { id: uid('apt'), clientId: 'cli_2', clientName: 'Marcos Vinícius', barberId: 'usr_rafa', serviceId: 'srv_barba', datetime: inHours(3), status: 'agendado', notes: '' },
-    { id: uid('apt'), clientId: 'cli_4', clientName: 'Lucas Ferreira', barberId: 'usr_owner', serviceId: 'srv_degrade', datetime: inHours(5), status: 'agendado', notes: 'Confirmar por WhatsApp' },
+    { id: uid('apt'), clientId: 'cli_1', clientName: 'João Pedro', barberId: 'usr_owner', serviceIds: ['srv_cabelo'], datetime: inHours(2), status: 'agendado', notes: '' },
+    { id: uid('apt'), clientId: 'cli_2', clientName: 'Marcos Vinícius', barberId: 'usr_rafa', serviceIds: ['srv_barba'], datetime: inHours(3), status: 'agendado', notes: '' },
+    { id: uid('apt'), clientId: 'cli_4', clientName: 'Lucas Ferreira', barberId: 'usr_owner', serviceIds: ['srv_cabelo_barba', 'srv_sobr'], datetime: inHours(5), status: 'agendado', notes: 'Confirmar por WhatsApp' },
   ]
 
   const queue = [
@@ -184,8 +162,45 @@ export function buildSeed() {
     settings: {
       shopName: 'João Victor Barbershop',
       productDefaultPct: 20,
+      catalogVersion: CATALOG_VERSION,
     },
   }
+}
+
+// Versão do catálogo. Ao incrementar, a migração aplica o catálogo novo aos
+// aparelhos que já têm o app instalado (ver DataContext.migrate).
+export const CATALOG_VERSION = 2
+
+// Catálogo real da barbearia (somente serviços — sem produtos por enquanto).
+// Comissão do barbeiro por categoria (a barbearia fica com o restante).
+export function buildCatalog() {
+  const categories = [
+    { id: 'cat_corte', name: 'Cortes', type: 'service', barberPct: 50 },
+    { id: 'cat_barba', name: 'Barba', type: 'service', barberPct: 50 },
+    { id: 'cat_sobr', name: 'Sobrancelha', type: 'service', barberPct: 50 },
+    { id: 'cat_alis', name: 'Alisamento', type: 'service', barberPct: 50 },
+    { id: 'cat_outros', name: 'Outros', type: 'service', barberPct: 50 },
+  ]
+  const svc = (id, name, categoryId, price) => ({
+    id,
+    name,
+    categoryId,
+    price,
+    active: true,
+    allowedBarberIds: [],
+  })
+  const services = [
+    svc('srv_cabelo', 'Cabelo', 'cat_corte', 40),
+    svc('srv_barba', 'Barba', 'cat_barba', 35),
+    svc('srv_cabelo_sobr', 'Cabelo sobrancelha', 'cat_corte', 50),
+    svc('srv_cabelo_barba', 'Cabelo e barba', 'cat_corte', 70),
+    svc('srv_corte_alis', 'Corte com alisamento', 'cat_alis', 110),
+    svc('srv_corte_alis_barba', 'Corte alisamento barba', 'cat_alis', 140),
+    svc('srv_alis', 'Alisamento', 'cat_alis', 80),
+    svc('srv_sobr', 'Sobrancelha', 'cat_sobr', 10),
+    svc('srv_pigment', 'Pigmentação', 'cat_outros', 25),
+  ]
+  return { categories, services }
 }
 
 function monthKeyFrom(d) {
