@@ -276,6 +276,63 @@ export function DataProvider({ children }) {
     [db.packages, db.services, update, patch],
   )
 
+  // Exclui / estorna um lançamento, revertendo efeitos colaterais:
+  // - abatimento de pacote: devolve 1 ao saldo
+  // - venda de pacote: remove o pacote e seus abatimentos
+  const deleteTransaction = useCallback(
+    (id) => {
+      const tx = db.transactions.find((t) => t.id === id)
+      if (!tx) return
+      if (tx.type === 'redemption' && tx.packageId && tx.serviceId) {
+        const pkg = db.packages.find((p) => p.id === tx.packageId)
+        if (pkg) {
+          let restored = false
+          const items = pkg.items.map((i) => {
+            if (!restored && i.serviceId === tx.serviceId && i.qtyUsed > 0) {
+              restored = true
+              return { ...i, qtyUsed: i.qtyUsed - 1 }
+            }
+            return i
+          })
+          patch('packages', pkg.id, { items, status: 'ativo' })
+        }
+      }
+      if (tx.type === 'package' && tx.packageId) {
+        update('packages', (list) => list.filter((p) => p.id !== tx.packageId))
+        update('transactions', (list) => list.filter((t) => t.id !== id && t.packageId !== tx.packageId))
+        return
+      }
+      update('transactions', (list) => list.filter((t) => t.id !== id))
+    },
+    [db.transactions, db.packages, update, patch],
+  )
+
+  // Edita valor final e/ou pagamento de uma venda de serviço (recalcula comissão)
+  const editSaleTransaction = useCallback(
+    (id, { total, payments }) => {
+      const tx = db.transactions.find((t) => t.id === id)
+      if (!tx) return null
+      const finalTotal = total != null && total !== '' ? +total : tx.price
+      let share
+      if (tx.items?.length) {
+        share = blendedBarberShare(tx.items.map((i) => ({ serviceId: i.serviceId, qty: i.qty })), finalTotal).share
+      } else {
+        share = +(finalTotal * ((tx.barberPct ?? 50) / 100)).toFixed(2)
+      }
+      const pays = normPayments(payments, finalTotal)
+      patch('transactions', id, {
+        price: finalTotal,
+        barberShare: share,
+        shopShare: +(finalTotal - share).toFixed(2),
+        payments: pays,
+        paymentMethod: pays.length > 1 ? 'misto' : pays[0]?.method || tx.paymentMethod,
+        edited: true,
+      })
+      return true
+    },
+    [db.transactions, blendedBarberShare, patch],
+  )
+
   const value = useMemo(
     () => ({
       db,
@@ -287,6 +344,8 @@ export function DataProvider({ children }) {
       addSale,
       sellPackage,
       redeemFromPackage,
+      deleteTransaction,
+      editSaleTransaction,
       resetData: () => {
         const seed = buildSeed()
         setDb(seed)
@@ -327,7 +386,7 @@ export function DataProvider({ children }) {
           (p) => p.clientId === clientId && p.items.some((i) => i.qtyTotal - i.qtyUsed > 0),
         ),
     }),
-    [db, addTo, patch, remove, addTransaction, addSale, sellPackage, redeemFromPackage],
+    [db, addTo, patch, remove, addTransaction, addSale, sellPackage, redeemFromPackage, deleteTransaction, editSaleTransaction],
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

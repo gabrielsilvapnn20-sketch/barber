@@ -26,7 +26,7 @@ const payValid = (st, total) => {
 }
 
 export default function Lancar() {
-  const { db, addSale, sellPackage, redeemFromPackage, activePackagesForClient, onlyBarbers, owner } = useData()
+  const { db, addSale, sellPackage, redeemFromPackage, deleteTransaction, editSaleTransaction, activePackagesForClient, onlyBarbers, owner } = useData()
   const { user, isOwner } = useAuth()
   const toast = useToast()
 
@@ -37,6 +37,7 @@ export default function Lancar() {
   const [editValue, setEditValue] = useState(false)
   const [totalOverride, setTotalOverride] = useState('')
   const [pay, setPay] = useState(emptyPay)
+  const [editTx, setEditTx] = useState(null) // transação em edição
   const [pkgModal, setPkgModal] = useState(false)
 
   const selectableBarbers = isOwner ? [owner, ...onlyBarbers] : [user]
@@ -265,17 +266,43 @@ export default function Lancar() {
           </div>
         )}
 
-        {/* Lançados hoje (recolhido) */}
+        {/* Lançados hoje (recolhido) — com editar/estornar */}
         {todayMine.length > 0 && (
           <Accordion title={`Lançados hoje (${todayMine.length})`} icon={<Icon.clock size={16} />}>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {todayMine.map((t) => (
-                <div key={t.id} className="flex items-center justify-between text-sm">
-                  <span className="min-w-0 flex-1 truncate text-slate-500">
-                    {fmtTime(t.date)} · {t.serviceName}
-                    {t.type === 'redemption' && <span className="ml-1 text-emerald-500">(pacote)</span>}
-                  </span>
-                  <span className="font-semibold">{t.price > 0 ? brl(t.price) : '—'}</span>
+                <div key={t.id} className="flex items-center gap-2 rounded-lg px-1 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm">
+                      <span className="text-slate-400">{fmtTime(t.date)}</span> {t.serviceName}
+                      {t.type === 'redemption' && <span className="ml-1 text-emerald-500">(pacote)</span>}
+                      {t.type === 'package' && <span className="ml-1 text-brand-500">(combo)</span>}
+                      {t.edited && <span className="ml-1 text-[10px] text-amber-500">editado</span>}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold">{t.price > 0 ? brl(t.price) : '—'}</span>
+                  {t.type === 'service' && (
+                    <button onClick={() => setEditTx(t)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-brand-500 dark:hover:bg-slate-800" title="Editar valor/pagamento">
+                      <Icon.edit size={15} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      const msg = t.type === 'package'
+                        ? 'Estornar esta venda de combo? O pacote do cliente será removido.'
+                        : t.type === 'redemption'
+                          ? 'Estornar este abatimento? O saldo volta para o pacote do cliente.'
+                          : 'Excluir este lançamento?'
+                      if (confirm(msg)) {
+                        deleteTransaction(t.id)
+                        toast.info('Lançamento estornado.')
+                      }
+                    }}
+                    className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-red-500 dark:hover:bg-slate-800"
+                    title="Excluir / estornar"
+                  >
+                    <Icon.trash size={15} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -300,7 +327,62 @@ export default function Lancar() {
           }
         }}
       />
+
+      <EditSaleModal
+        tx={editTx}
+        onClose={() => setEditTx(null)}
+        onSave={({ total, payments }) => {
+          editSaleTransaction(editTx.id, { total, payments })
+          toast.success('Lançamento atualizado.')
+          setEditTx(null)
+        }}
+      />
     </div>
+  )
+}
+
+function EditSaleModal({ tx, onClose, onSave }) {
+  const [total, setTotal] = useState('')
+  const [pay, setPay] = useState(emptyPay)
+
+  useMemoOpen(!!tx, () => {
+    if (!tx) return
+    setTotal(String(tx.price))
+    if (tx.payments?.length > 1) {
+      setPay({ split: true, method: 'pix', lines: tx.payments.map((p) => ({ method: p.method, amount: String(p.amount) })) })
+    } else {
+      setPay({ ...emptyPay(), split: false, method: tx.paymentMethod || 'pix' })
+    }
+  })
+
+  if (!tx) return null
+  const finalTotal = total !== '' ? +total : tx.price
+
+  return (
+    <Modal
+      open={!!tx}
+      onClose={onClose}
+      title="Editar lançamento"
+      footer={
+        <>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn-primary" onClick={() => onSave({ total: total !== '' ? +total : null, payments: paymentsFromState(pay, finalTotal) })} disabled={!payValid(pay, finalTotal)}>
+            Salvar
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <div className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-800/50">
+          <p className="font-semibold">{tx.serviceName}</p>
+          <p className="text-xs text-slate-400">Ajuste o valor e/ou a forma de pagamento.</p>
+        </div>
+        <Field label="Valor (R$)">
+          <input type="number" step="0.01" className="input" value={total} onChange={(e) => setTotal(e.target.value)} autoFocus />
+        </Field>
+        <PaymentControl total={finalTotal} state={pay} setState={setPay} />
+      </div>
+    </Modal>
   )
 }
 
