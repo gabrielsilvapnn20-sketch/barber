@@ -6,7 +6,7 @@ import { PageHeader, StatCard, Modal, Field } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
 import { brl, fmtDate, fmtDateTime, fmtTime, isSameDay } from '../lib/utils.js'
 
-const payLabel = { pix: 'PIX', dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito' }
+const payLabel = { pix: 'PIX', dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito', pacote: 'Pacote', misto: 'Misto' }
 
 export default function Caixa() {
   const { db, addTo, patch } = useData()
@@ -24,12 +24,24 @@ export default function Caixa() {
     () => db.transactions.filter((t) => new Date(t.date) >= sinceDate),
     [db.transactions, current],
   )
+  // Divide cada venda pelas formas de pagamento (suporta pagamento misto)
+  const paymentsOf = (t) =>
+    t.payments?.length ? t.payments : [{ method: t.paymentMethod, amount: t.price }]
+
   const totalIn = movement.reduce((s, t) => s + t.price, 0)
-  const cashIn = movement.filter((t) => t.paymentMethod === 'dinheiro').reduce((s, t) => s + t.price, 0)
+  const cashIn = movement.reduce(
+    (s, t) => s + paymentsOf(t).filter((p) => p.method === 'dinheiro').reduce((a, p) => a + (p.amount || 0), 0),
+    0,
+  )
 
   const byMethod = useMemo(() => {
     const map = {}
-    for (const t of movement) map[t.paymentMethod] = (map[t.paymentMethod] || 0) + t.price
+    for (const t of movement) {
+      for (const p of paymentsOf(t)) {
+        if (!p.amount) continue
+        map[p.method] = (map[p.method] || 0) + p.amount
+      }
+    }
     return map
   }, [movement])
 

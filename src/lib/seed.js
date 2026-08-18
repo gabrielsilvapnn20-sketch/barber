@@ -146,6 +146,22 @@ export function buildSeed() {
     { id: uid('gal'), barberId: 'usr_owner', clientId: 'cli_1', clientName: 'João Pedro', note: 'Degradê + barba', before: '', after: '', date: daysAgo(3, 12) },
   ]
 
+  const packages = [
+    {
+      id: uid('pkg'),
+      clientId: 'cli_1',
+      name: 'Pacote Mensal',
+      items: [
+        { serviceId: 'srv_cabelo', serviceName: 'Cabelo', qtyTotal: 4, qtyUsed: 1, unitPrice: 40, categoryId: 'cat_corte' },
+        { serviceId: 'srv_barba', serviceName: 'Barba', qtyTotal: 4, qtyUsed: 2, unitPrice: 35, categoryId: 'cat_barba' },
+      ],
+      total: 250,
+      soldBy: 'usr_owner',
+      createdAt: daysAgo(6, 10),
+      status: 'ativo',
+    },
+  ]
+
   return {
     users,
     categories,
@@ -159,6 +175,7 @@ export function buildSeed() {
     cashSessions,
     daysOff,
     gallery,
+    packages,
     settings: {
       shopName: 'João Victor Barbershop',
       productDefaultPct: 20,

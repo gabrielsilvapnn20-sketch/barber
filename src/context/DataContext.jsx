@@ -21,6 +21,8 @@ function migrate(db) {
     db.services = services
     db.settings.catalogVersion = CATALOG_VERSION
   }
+  // Coleção de pacotes/combos (adicionada depois)
+  if (!Array.isArray(db.packages)) db.packages = []
   return db
 }
 
@@ -102,6 +104,178 @@ export function DataProvider({ children }) {
     [db.services, db.categories, update, patch],
   )
 
+  // Comissão do barbeiro = % média ponderada das categorias dos itens,
+  // aplicada sobre o valor final (que pode ter sido editado).
+  const blendedBarberShare = useCallback(
+    (items, finalTotal) => {
+      let base = 0
+      let weighted = 0
+      for (const it of items) {
+        const srv = db.services.find((s) => s.id === it.serviceId)
+        const cat = srv && db.categories.find((c) => c.id === srv.categoryId)
+        const pct = cat?.barberPct ?? 50
+        const line = (srv?.price || 0) * (it.qty || 1)
+        base += line
+        weighted += line * pct
+      }
+      const pct = base > 0 ? weighted / base : 50
+      return { share: +(finalTotal * (pct / 100)).toFixed(2), pct: Math.round(pct) }
+    },
+    [db.services, db.categories],
+  )
+
+  const normPayments = (payments, fallbackTotal) => {
+    const list = payments && payments.length ? payments : [{ method: 'pix', amount: fallbackTotal }]
+    return list
+      .map((p) => ({ method: p.method, amount: +(+p.amount || 0).toFixed(2) }))
+      .filter((p) => p.amount > 0)
+  }
+
+  // Venda de um ou vários serviços numa transação, com valor final editável e
+  // pagamento único ou dividido (split).
+  const addSale = useCallback(
+    ({ barberId, clientId, items, total, payments, date }) => {
+      const norm = (items || [])
+        .filter((i) => (i.qty || 1) > 0)
+        .map((i) => {
+          const srv = db.services.find((s) => s.id === i.serviceId)
+          const cat = srv && db.categories.find((c) => c.id === srv.categoryId)
+          return {
+            serviceId: i.serviceId,
+            serviceName: srv?.name,
+            qty: i.qty || 1,
+            unitPrice: srv?.price || 0,
+            categoryId: cat?.id,
+            categoryName: cat?.name,
+          }
+        })
+      if (!norm.length) return null
+      const base = norm.reduce((s, i) => s + i.unitPrice * i.qty, 0)
+      const finalTotal = total != null && total !== '' ? +total : base
+      const { share, pct } = blendedBarberShare(norm, finalTotal)
+      const single = norm.length === 1
+      const pays = normPayments(payments, finalTotal)
+      const tx = {
+        id: uid('tx'),
+        barberId,
+        clientId: clientId || null,
+        items: norm,
+        serviceId: single && norm[0].qty === 1 ? norm[0].serviceId : null,
+        serviceName: norm.map((i) => (i.qty > 1 ? `${i.qty}x ${i.serviceName}` : i.serviceName)).join(' + '),
+        categoryId: single ? norm[0].categoryId : null,
+        categoryName: single ? norm[0].categoryName : 'Combo',
+        type: 'service',
+        price: finalTotal,
+        edited: total != null && total !== '' && +total !== base,
+        barberPct: pct,
+        barberShare: share,
+        shopShare: +(finalTotal - share).toFixed(2),
+        payments: pays,
+        paymentMethod: pays.length > 1 ? 'misto' : pays[0]?.method || 'pix',
+        date: date || new Date().toISOString(),
+      }
+      update('transactions', (list) => [tx, ...list])
+      if (clientId) patch('clients', clientId, { lastVisit: tx.date })
+      return tx
+    },
+    [db.services, db.categories, blendedBarberShare, update, patch],
+  )
+
+  // Vende um pacote/combo: cria o pacote com saldos por serviço e registra a
+  // transação financeira da venda (valor editável, pagamento único ou dividido).
+  const sellPackage = useCallback(
+    ({ barberId, clientId, name, items, total, payments, date }) => {
+      const norm = (items || [])
+        .filter((i) => (i.qty || 0) > 0)
+        .map((i) => {
+          const srv = db.services.find((s) => s.id === i.serviceId)
+          return {
+            serviceId: i.serviceId,
+            serviceName: srv?.name,
+            qtyTotal: i.qty,
+            qtyUsed: 0,
+            unitPrice: srv?.price || 0,
+            categoryId: srv?.categoryId,
+          }
+        })
+      if (!norm.length || !clientId) return null
+      const base = norm.reduce((s, i) => s + i.unitPrice * i.qtyTotal, 0)
+      const finalTotal = total != null && total !== '' ? +total : base
+      const when = date || new Date().toISOString()
+      const pkg = {
+        id: uid('pkg'),
+        clientId,
+        name: name || 'Pacote',
+        items: norm,
+        total: finalTotal,
+        soldBy: barberId,
+        createdAt: when,
+        status: 'ativo',
+      }
+      update('packages', (list) => [pkg, ...list])
+      const { share, pct } = blendedBarberShare(
+        norm.map((i) => ({ serviceId: i.serviceId, qty: i.qtyTotal })),
+        finalTotal,
+      )
+      const pays = normPayments(payments, finalTotal)
+      const tx = {
+        id: uid('tx'),
+        barberId,
+        clientId,
+        packageId: pkg.id,
+        serviceName: `Pacote: ${pkg.name}`,
+        categoryName: 'Pacote',
+        type: 'package',
+        price: finalTotal,
+        barberPct: pct,
+        barberShare: share,
+        shopShare: +(finalTotal - share).toFixed(2),
+        payments: pays,
+        paymentMethod: pays.length > 1 ? 'misto' : pays[0]?.method || 'pix',
+        date: when,
+      }
+      update('transactions', (list) => [tx, ...list])
+      patch('clients', clientId, { lastVisit: when })
+      return { pkg, tx }
+    },
+    [db.services, db.categories, blendedBarberShare, update, patch],
+  )
+
+  // Abate um serviço de um pacote ativo — sem nova cobrança financeira.
+  const redeemFromPackage = useCallback(
+    ({ packageId, serviceId, barberId, date }) => {
+      const pkg = db.packages.find((p) => p.id === packageId)
+      if (!pkg) return null
+      const item = pkg.items.find((i) => i.serviceId === serviceId && i.qtyTotal - i.qtyUsed > 0)
+      if (!item) return null
+      const newItems = pkg.items.map((i) => (i === item ? { ...i, qtyUsed: i.qtyUsed + 1 } : i))
+      const allUsed = newItems.every((i) => i.qtyUsed >= i.qtyTotal)
+      patch('packages', pkg.id, { items: newItems, status: allUsed ? 'concluido' : 'ativo' })
+      const srv = db.services.find((s) => s.id === serviceId)
+      const when = date || new Date().toISOString()
+      const tx = {
+        id: uid('tx'),
+        barberId,
+        clientId: pkg.clientId,
+        packageId: pkg.id,
+        serviceId,
+        serviceName: srv?.name,
+        categoryName: 'Abatido de pacote',
+        type: 'redemption',
+        price: 0,
+        barberShare: 0,
+        shopShare: 0,
+        payments: [],
+        paymentMethod: 'pacote',
+        date: when,
+      }
+      update('transactions', (list) => [tx, ...list])
+      patch('clients', pkg.clientId, { lastVisit: when })
+      return tx
+    },
+    [db.packages, db.services, update, patch],
+  )
+
   const value = useMemo(
     () => ({
       db,
@@ -110,6 +284,9 @@ export function DataProvider({ children }) {
       patch,
       remove,
       addTransaction,
+      addSale,
+      sellPackage,
+      redeemFromPackage,
       resetData: () => {
         const seed = buildSeed()
         setDb(seed)
@@ -127,6 +304,7 @@ export function DataProvider({ children }) {
           cashSessions: [],
           daysOff: [],
           gallery: [],
+          packages: [],
           clients: [],
           users: prev.users.map((u) => ({ ...u, lastVisit: undefined })),
         }))
@@ -143,8 +321,13 @@ export function DataProvider({ children }) {
       serviceById: (id) => db.services.find((s) => s.id === id),
       categoryById: (id) => db.categories.find((c) => c.id === id),
       clientById: (id) => db.clients.find((c) => c.id === id),
+      // Pacotes ativos (com saldo restante) de um cliente
+      activePackagesForClient: (clientId) =>
+        (db.packages || []).filter(
+          (p) => p.clientId === clientId && p.items.some((i) => i.qtyTotal - i.qtyUsed > 0),
+        ),
     }),
-    [db, addTo, patch, remove, addTransaction],
+    [db, addTo, patch, remove, addTransaction, addSale, sellPackage, redeemFromPackage],
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

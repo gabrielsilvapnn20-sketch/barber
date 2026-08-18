@@ -20,7 +20,7 @@ import { brl, fmtDate, fmtTime } from '../lib/utils.js'
 import { exportCSV, exportPDF } from '../lib/reports.js'
 
 const COLORS = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#14b8a6', '#f97316']
-const payLabel = { pix: 'PIX', dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito' }
+const payLabel = { pix: 'PIX', dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito', pacote: 'Pacote', misto: 'Misto' }
 
 export default function Financeiro() {
   const { db } = useData()
@@ -41,8 +41,12 @@ export default function Financeiro() {
   const byPayment = useMemo(() => {
     const map = {}
     for (const t of txs) {
-      const k = payLabel[t.paymentMethod] || t.paymentMethod
-      map[k] = (map[k] || 0) + t.price
+      const pays = t.payments?.length ? t.payments : [{ method: t.paymentMethod, amount: t.price }]
+      for (const p of pays) {
+        if (!p.amount) continue
+        const k = payLabel[p.method] || p.method
+        map[k] = (map[k] || 0) + p.amount
+      }
     }
     return Object.entries(map).map(([name, value]) => ({ name, value }))
   }, [txs])
@@ -77,7 +81,9 @@ export default function Financeiro() {
         Serviço: t.serviceName,
         Categoria: t.categoryName,
         Cliente: db.clients.find((c) => c.id === t.clientId)?.name || 'Avulso',
-        Pagamento: payLabel[t.paymentMethod] || t.paymentMethod,
+        Pagamento: t.payments?.length > 1
+          ? t.payments.map((p) => `${payLabel[p.method] || p.method} ${brl(p.amount)}`).join(' + ')
+          : payLabel[t.paymentMethod] || t.paymentMethod,
         Valor: brl(t.price),
         'Comissão barbeiro': brl(t.barberShare),
         Barbearia: brl(t.shopShare),

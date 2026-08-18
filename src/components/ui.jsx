@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { initials, colorFrom } from '../lib/utils.js'
 import Icon from './Icons.jsx'
 
@@ -141,6 +141,52 @@ export function Field({ label, children }) {
     <div>
       <label className="label">{label}</label>
       {children}
+    </div>
+  )
+}
+
+export function Accordion({ title, icon, children, defaultOpen = false, right }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-sm font-semibold"
+      >
+        {icon && <span className="text-slate-400">{icon}</span>}
+        <span className="flex-1 text-left">{title}</span>
+        {right}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && <div className="border-t border-slate-100 p-3 dark:border-slate-800">{children}</div>}
+    </div>
+  )
+}
+
+// Stepper de quantidade (− valor +)
+export function Stepper({ value, onChange, min = 1, max = 99 }) {
+  return (
+    <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="px-2.5 py-1 text-lg font-bold text-slate-500 disabled:opacity-30"
+        disabled={value <= min}
+      >
+        −
+      </button>
+      <span className="min-w-[28px] text-center text-sm font-bold tabular-nums">{value}</span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        className="px-2.5 py-1 text-lg font-bold text-slate-500 disabled:opacity-30"
+        disabled={value >= max}
+      >
+        +
+      </button>
     </div>
   )
 }
