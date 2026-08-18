@@ -265,6 +265,9 @@ function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, d
         : [...f.serviceIds, id],
     }))
 
+  // Sugere apenas clientes da cartela do barbeiro selecionado
+  const barberClients = db.clients.filter((c) => c.barberId === form.barberId)
+
   // Só serviços (produtos não entram em agendamento)
   const bookableServices = db.services.filter(
     (s) => s.active && db.categories.find((c) => c.id === s.categoryId)?.type === 'service',
@@ -306,14 +309,15 @@ function AppointmentModal({ open, onClose, onSave, barbers, defaultBarber, db, d
             list="clients-list"
             value={form.clientName}
             onChange={(e) => {
-              const match = db.clients.find((c) => c.name === e.target.value)
+              const match = barberClients.find((c) => c.name === e.target.value)
               set('clientName', e.target.value)
               set('clientId', match?.id || '')
             }}
             placeholder="Nome do cliente"
           />
+          {/* Só sugere clientes da cartela do barbeiro selecionado */}
           <datalist id="clients-list">
-            {db.clients.map((c) => (
+            {barberClients.map((c) => (
               <option key={c.id} value={c.name} />
             ))}
           </datalist>

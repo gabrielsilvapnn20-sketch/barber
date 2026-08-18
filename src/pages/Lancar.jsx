@@ -49,9 +49,8 @@ export default function Lancar() {
   const svcById = (id) => db.services.find((s) => s.id === id)
   const catPct = (s) => db.categories.find((c) => c.id === s?.categoryId)?.barberPct ?? 50
 
-  const clients = isOwner
-    ? db.clients
-    : [...db.clients.filter((c) => c.barberId === user.id), ...db.clients.filter((c) => c.barberId !== user.id)]
+  // Cada barbeiro só enxerga a própria cartela; o dono vê todos.
+  const clients = isOwner ? db.clients : db.clients.filter((c) => c.barberId === user.id)
 
   const activePkgs = clientId ? activePackagesForClient(clientId) : []
 
