@@ -16,51 +16,17 @@ export function buildSeed() {
     return d.toISOString()
   }
 
-  const owner = {
-    id: 'usr_owner',
-    name: 'Carlos Mendes',
-    email: 'dono@barbearia.com',
-    password: '123456',
-    pin: '1234',
-    role: 'owner',
-    phone: '(11) 99999-0001',
-    active: true,
-    color: '#0ea5e9',
-  }
-  const barber2 = {
-    id: 'usr_rafa',
-    name: 'Rafael Souza',
-    email: 'rafael@barbearia.com',
-    password: '123456',
-    pin: '2222',
-    role: 'barber',
-    phone: '(11) 99999-0002',
-    active: true,
-    color: '#8b5cf6',
-  }
-  const barber3 = {
-    id: 'usr_bruno',
-    name: 'Bruno Lima',
-    email: 'bruno@barbearia.com',
-    password: '123456',
-    pin: '3333',
-    role: 'barber',
-    phone: '(11) 99999-0003',
-    active: true,
-    color: '#f59e0b',
-  }
-
-  const users = [owner, barber2, barber3]
+  const users = buildTeam()
 
   // Catálogo real de serviços (categorias + serviços)
   const { categories, services } = buildCatalog()
 
   const clients = [
     { id: 'cli_1', name: 'João Pedro', phone: '(11) 98888-1111', birthday: '1990-08-12', barberId: 'usr_owner', notes: 'Gosta de degradê baixo' },
-    { id: 'cli_2', name: 'Marcos Vinícius', phone: '(11) 98888-2222', birthday: '1985-03-25', barberId: 'usr_rafa', notes: '' },
-    { id: 'cli_3', name: 'Felipe Andrade', phone: '(11) 98888-3333', birthday: '1998-11-05', barberId: 'usr_bruno', notes: 'Alérgico a certos produtos' },
+    { id: 'cli_2', name: 'Marcos Vinícius', phone: '(11) 98888-2222', birthday: '1985-03-25', barberId: 'usr_edu', notes: '' },
+    { id: 'cli_3', name: 'Felipe Andrade', phone: '(11) 98888-3333', birthday: '1998-11-05', barberId: 'usr_edu', notes: 'Alérgico a certos produtos' },
     { id: 'cli_4', name: 'Lucas Ferreira', phone: '(11) 98888-4444', birthday: '1992-08-08', barberId: 'usr_owner', notes: '' },
-    { id: 'cli_5', name: 'Gabriel Rocha', phone: '(11) 98888-5555', birthday: '2000-01-30', barberId: 'usr_rafa', notes: 'Sempre barba + corte' },
+    { id: 'cli_5', name: 'Gabriel Rocha', phone: '(11) 98888-5555', birthday: '2000-01-30', barberId: 'usr_edu', notes: 'Sempre barba + corte' },
   ]
 
   // Helper to build a transaction with commission snapshot
@@ -92,35 +58,35 @@ export function buildSeed() {
     tx('usr_owner', 'srv_cabelo', 'cli_1', daysAgo(0, 9, 30)),
     tx('usr_owner', 'srv_barba', 'cli_1', daysAgo(0, 9, 45)),
     tx('usr_owner', 'srv_cabelo_barba', 'cli_4', daysAgo(0, 11, 0)),
-    tx('usr_rafa', 'srv_cabelo', 'cli_2', daysAgo(0, 10, 15)),
-    tx('usr_rafa', 'srv_sobr', 'cli_2', daysAgo(0, 10, 30)),
-    tx('usr_bruno', 'srv_corte_alis', 'cli_3', daysAgo(0, 13, 0)),
-    tx('usr_bruno', 'srv_sobr', 'cli_3', daysAgo(0, 13, 20)),
+    tx('usr_edu', 'srv_cabelo', 'cli_2', daysAgo(0, 10, 15)),
+    tx('usr_edu', 'srv_sobr', 'cli_2', daysAgo(0, 10, 30)),
+    tx('usr_edu', 'srv_corte_alis', 'cli_3', daysAgo(0, 13, 0)),
+    tx('usr_edu', 'srv_sobr', 'cli_3', daysAgo(0, 13, 20)),
     // Yesterday
     tx('usr_owner', 'srv_cabelo', 'cli_4', daysAgo(1, 10)),
-    tx('usr_rafa', 'srv_barba', 'cli_5', daysAgo(1, 14)),
-    tx('usr_rafa', 'srv_cabelo_sobr', 'cli_5', daysAgo(1, 14, 30)),
-    tx('usr_bruno', 'srv_pigment', 'cli_3', daysAgo(1, 16)),
+    tx('usr_edu', 'srv_barba', 'cli_5', daysAgo(1, 14)),
+    tx('usr_edu', 'srv_cabelo_sobr', 'cli_5', daysAgo(1, 14, 30)),
+    tx('usr_edu', 'srv_pigment', 'cli_3', daysAgo(1, 16)),
     // Earlier this month
     tx('usr_owner', 'srv_cabelo_barba', 'cli_1', daysAgo(3, 11)),
     tx('usr_owner', 'srv_cabelo', 'cli_4', daysAgo(4, 15)),
-    tx('usr_rafa', 'srv_alis', 'cli_2', daysAgo(5, 10)),
-    tx('usr_rafa', 'srv_cabelo', 'cli_2', daysAgo(6, 12)),
-    tx('usr_bruno', 'srv_cabelo', 'cli_3', daysAgo(7, 9)),
-    tx('usr_bruno', 'srv_barba', 'cli_3', daysAgo(8, 17)),
+    tx('usr_edu', 'srv_alis', 'cli_2', daysAgo(5, 10)),
+    tx('usr_edu', 'srv_cabelo', 'cli_2', daysAgo(6, 12)),
+    tx('usr_edu', 'srv_cabelo', 'cli_3', daysAgo(7, 9)),
+    tx('usr_edu', 'srv_barba', 'cli_3', daysAgo(8, 17)),
     tx('usr_owner', 'srv_corte_alis_barba', 'cli_1', daysAgo(9, 11)),
-    tx('usr_rafa', 'srv_cabelo_barba', 'cli_5', daysAgo(10, 13)),
-    tx('usr_bruno', 'srv_cabelo', 'cli_3', daysAgo(12, 16)),
+    tx('usr_edu', 'srv_cabelo_barba', 'cli_5', daysAgo(10, 13)),
+    tx('usr_edu', 'srv_cabelo', 'cli_3', daysAgo(12, 16)),
   ]
 
   const appointments = [
     { id: uid('apt'), clientId: 'cli_1', clientName: 'João Pedro', barberId: 'usr_owner', serviceIds: ['srv_cabelo'], datetime: inHours(2), status: 'agendado', notes: '' },
-    { id: uid('apt'), clientId: 'cli_2', clientName: 'Marcos Vinícius', barberId: 'usr_rafa', serviceIds: ['srv_barba'], datetime: inHours(3), status: 'agendado', notes: '' },
+    { id: uid('apt'), clientId: 'cli_2', clientName: 'Marcos Vinícius', barberId: 'usr_edu', serviceIds: ['srv_barba'], datetime: inHours(3), status: 'agendado', notes: '' },
     { id: uid('apt'), clientId: 'cli_4', clientName: 'Lucas Ferreira', barberId: 'usr_owner', serviceIds: ['srv_cabelo_barba', 'srv_sobr'], datetime: inHours(5), status: 'agendado', notes: 'Confirmar por WhatsApp' },
   ]
 
   const queue = [
-    { id: uid('q'), clientName: 'Cliente sem agendamento', barberId: 'usr_bruno', status: 'aguardando', createdAt: daysAgo(0, new Date().getHours(), 5) },
+    { id: uid('q'), clientName: 'Cliente sem agendamento', barberId: 'usr_edu', status: 'aguardando', createdAt: daysAgo(0, new Date().getHours(), 5) },
   ]
 
   const expenses = [
@@ -139,7 +105,7 @@ export function buildSeed() {
   ]
 
   const daysOff = [
-    { id: uid('off'), barberId: 'usr_bruno', date: daysAgo(-3, 0), reason: 'Folga programada' },
+    { id: uid('off'), barberId: 'usr_edu', date: daysAgo(-3, 0), reason: 'Folga programada' },
   ]
 
   const gallery = [
@@ -176,10 +142,12 @@ export function buildSeed() {
     daysOff,
     gallery,
     packages,
+    cashMovements: [],
     settings: {
       shopName: 'João Victor Barbershop',
       productDefaultPct: 20,
       catalogVersion: CATALOG_VERSION,
+      teamVersion: TEAM_VERSION,
     },
   }
 }
@@ -187,6 +155,37 @@ export function buildSeed() {
 // Versão do catálogo. Ao incrementar, a migração aplica o catálogo novo aos
 // aparelhos que já têm o app instalado (ver DataContext.migrate).
 export const CATALOG_VERSION = 2
+
+// Equipe: incrementar aplica o time abaixo a instalações já existentes.
+export const TEAM_VERSION = 1
+
+// Dono (João Victor) + um barbeiro (Eduardo). O dono também atende.
+export function buildTeam() {
+  return [
+    {
+      id: 'usr_owner',
+      name: 'João Victor',
+      email: 'joao@joaovictorbarber.com',
+      password: '123456',
+      pin: '1010',
+      role: 'owner',
+      phone: '(11) 99999-0001',
+      active: true,
+      color: '#0ea5e9',
+    },
+    {
+      id: 'usr_edu',
+      name: 'Eduardo',
+      email: 'eduardo@joaovictorbarber.com',
+      password: '123456',
+      pin: '2020',
+      role: 'barber',
+      phone: '(11) 99999-0002',
+      active: true,
+      color: '#8b5cf6',
+    },
+  ]
+}
 
 // Catálogo real da barbearia (somente serviços — sem produtos por enquanto).
 // Comissão do barbeiro por categoria (a barbearia fica com o restante).

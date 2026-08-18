@@ -76,6 +76,8 @@ export default function Equipe() {
                 <Stat label="Serviços" value={allowedCount} />
               </div>
 
+              <AccessInfo user={b} />
+
               {b.role === 'barber' && (
                 <ServiceReleaser barberId={b.id} db={db} setDb={setDb} />
               )}
@@ -128,6 +130,38 @@ export default function Equipe() {
           toast.info('Folga removida.')
         }}
       />
+    </div>
+  )
+}
+
+function AccessInfo({ user }) {
+  const [show, setShow] = useState(false)
+  return (
+    <div className="mt-3 rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/50">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <Icon.user size={13} /> Acesso (login)
+        </span>
+        <button onClick={() => setShow((s) => !s)} className="text-xs font-semibold text-brand-500">
+          {show ? 'Ocultar' : 'Mostrar'}
+        </button>
+      </div>
+      {show && (
+        <div className="mt-2 space-y-1 text-xs">
+          <div className="flex justify-between gap-2">
+            <span className="text-slate-400">E-mail</span>
+            <span className="truncate font-mono">{user.email}</span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-slate-400">PIN</span>
+            <span className="font-mono font-bold">{user.pin || '—'}</span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-slate-400">Senha</span>
+            <span className="font-mono">{user.password || '—'}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
-import { buildSeed, buildCatalog, CATALOG_VERSION } from '../lib/seed.js'
+import { buildSeed, buildCatalog, buildTeam, CATALOG_VERSION, TEAM_VERSION } from '../lib/seed.js'
 import { uid, isSameDay, isSameMonth, monthKey } from '../lib/utils.js'
 
 const DataContext = createContext(null)
@@ -23,6 +23,14 @@ function migrate(db) {
   }
   // Coleção de pacotes/combos (adicionada depois)
   if (!Array.isArray(db.packages)) db.packages = []
+  // Movimentos de caixa (sangria/suprimento)
+  if (!Array.isArray(db.cashMovements)) db.cashMovements = []
+  // Equipe: aplica o time atual (João Victor + Eduardo) uma vez por versão,
+  // preservando o dono se já existir com o mesmo id.
+  if (db.settings.teamVersion !== TEAM_VERSION) {
+    db.users = buildTeam()
+    db.settings.teamVersion = TEAM_VERSION
+  }
   return db
 }
 
@@ -364,6 +372,7 @@ export function DataProvider({ children }) {
           daysOff: [],
           gallery: [],
           packages: [],
+          cashMovements: [],
           clients: [],
           users: prev.users.map((u) => ({ ...u, lastVisit: undefined })),
         }))

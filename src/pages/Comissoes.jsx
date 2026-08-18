@@ -11,6 +11,22 @@ export default function Comissoes() {
   const [tab, setTab] = useState('categorias')
   const [catModal, setCatModal] = useState(null)
   const [srvModal, setSrvModal] = useState(null)
+  // filtros da aba Serviços
+  const [fType, setFType] = useState('all') // all | service | product
+  const [fCat, setFCat] = useState('')
+  const [fSearch, setFSearch] = useState('')
+  const [fStatus, setFStatus] = useState('all') // all | active | inactive
+
+  const catType = (id) => db.categories.find((c) => c.id === id)?.type || 'service'
+  const filteredServices = db.services.filter((s) => {
+    if (fType !== 'all' && catType(s.categoryId) !== fType) return false
+    if (fCat && s.categoryId !== fCat) return false
+    if (fStatus === 'active' && !s.active) return false
+    if (fStatus === 'inactive' && s.active) return false
+    if (fSearch.trim() && !s.name.toLowerCase().includes(fSearch.trim().toLowerCase())) return false
+    return true
+  })
+  const catsForFilter = db.categories.filter((c) => fType === 'all' || c.type === fType)
 
   const saveCat = (form) => {
     if (catModal === 'new') { addTo('categories', { id: uid('cat'), ...form, barberPct: Number(form.barberPct) }); toast.success('Categoria criada!') }
@@ -87,12 +103,55 @@ export default function Comissoes() {
         </>
       ) : (
         <>
-          <div className="mb-4 flex justify-end">
-            <button className="btn-primary" onClick={() => setSrvModal('new')}><Icon.plus size={18} /> Novo serviço</button>
+          {/* Filtros */}
+          <div className="card mb-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Icon.search size={16} />
+              <input
+                className="w-full bg-transparent text-sm outline-none"
+                placeholder="Buscar serviço ou produto..."
+                value={fSearch}
+                onChange={(e) => setFSearch(e.target.value)}
+              />
+              <button className="btn-primary !py-2" onClick={() => setSrvModal('new')}><Icon.plus size={16} /> Novo</button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Segmented
+                value={fType}
+                onChange={(v) => { setFType(v); setFCat('') }}
+                options={[
+                  { value: 'all', label: 'Todos' },
+                  { value: 'service', label: 'Serviços' },
+                  { value: 'product', label: 'Produtos' },
+                ]}
+              />
+              <select className="input !w-auto !py-2 text-sm" value={fCat} onChange={(e) => setFCat(e.target.value)}>
+                <option value="">Todas categorias</option>
+                {catsForFilter.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <Segmented
+                value={fStatus}
+                onChange={setFStatus}
+                options={[
+                  { value: 'all', label: 'Todos' },
+                  { value: 'active', label: 'Ativos' },
+                  { value: 'inactive', label: 'Inativos' },
+                ]}
+              />
+              {(fType !== 'all' || fCat || fSearch || fStatus !== 'all') && (
+                <button onClick={() => { setFType('all'); setFCat(''); setFSearch(''); setFStatus('all') }} className="text-xs font-semibold text-slate-400 hover:text-brand-500">
+                  Limpar filtros
+                </button>
+              )}
+            </div>
           </div>
+
           <div className="card">
+            <p className="mb-2 text-xs text-slate-400">{filteredServices.length} item(ns)</p>
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {db.services.map((s) => {
+              {filteredServices.map((s) => {
                 const cat = db.categories.find((c) => c.id === s.categoryId)
                 return (
                   <div key={s.id} className="flex items-center gap-3 py-3">
@@ -119,6 +178,9 @@ export default function Comissoes() {
                 )
               })}
             </div>
+            {filteredServices.length === 0 && (
+              <p className="py-8 text-center text-sm text-slate-400">Nenhum item encontrado com esses filtros.</p>
+            )}
           </div>
         </>
       )}

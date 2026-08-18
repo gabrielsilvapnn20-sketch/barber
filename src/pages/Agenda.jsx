@@ -18,6 +18,7 @@ export default function Agenda() {
   const toast = useToast()
   const [date, setDate] = useState(todayISO())
   const [modal, setModal] = useState(false)
+  const [barberFilter, setBarberFilter] = useState('all')
 
   const barbers = isOwner ? [owner, ...onlyBarbers] : [user]
 
@@ -66,11 +67,29 @@ export default function Agenda() {
     }
   }
 
+  // ---- semana do dia selecionado (strip de navegação) ----
+  const selDate = new Date(date + 'T12:00')
+  const weekStart = new Date(selDate)
+  weekStart.setDate(selDate.getDate() - selDate.getDay())
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    return d
+  })
+  const dayCount = (d) =>
+    db.appointments.filter(
+      (a) => isSameDay(a.datetime, d) && (isOwner || a.barberId === user.id) && a.status !== 'cancelado',
+    ).length
+  const wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+
+  const filtered = dayAppointments.filter((a) => barberFilter === 'all' || a.barberId === barberFilter)
+  const longDate = selDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
+
   return (
     <div>
       <PageHeader
         title="Agenda"
-        subtitle="Agendamentos por barbeiro"
+        subtitle={longDate.charAt(0).toUpperCase() + longDate.slice(1)}
         action={
           <button className="btn-primary" onClick={() => setModal(true)}>
             <Icon.plus size={18} /> Agendar
@@ -78,73 +97,114 @@ export default function Agenda() {
         }
       />
 
-      {/* Date nav */}
-      <div className="card mb-4 flex items-center justify-between">
-        <button className="btn-ghost !px-3" onClick={() => shiftDay(-1)}>‹</button>
-        <div className="flex items-center gap-3">
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="input !w-auto"
-          />
-          <button className="btn-ghost !py-2 !text-xs" onClick={() => setDate(todayISO())}>Hoje</button>
+      {/* Navegação por semana */}
+      <div className="card mb-4">
+        <div className="mb-2 flex items-center justify-between">
+          <button className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => shiftDay(-7)}>‹</button>
+          <span className="text-sm font-semibold capitalize">
+            {weekStart.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+          </span>
+          <button className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => shiftDay(7)}>›</button>
         </div>
-        <button className="btn-ghost !px-3" onClick={() => shiftDay(1)}>›</button>
+        <div className="grid grid-cols-7 gap-1">
+          {weekDays.map((d) => {
+            const iso = d.toISOString().slice(0, 10)
+            const active = iso === date
+            const today = isSameDay(d, new Date())
+            const count = dayCount(d)
+            return (
+              <button
+                key={iso}
+                onClick={() => setDate(iso)}
+                className={`flex flex-col items-center rounded-xl py-1.5 transition ${
+                  active ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/30' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span className={`text-[10px] font-semibold uppercase ${active ? 'text-white/80' : 'text-slate-400'}`}>{wd[d.getDay()]}</span>
+                <span className={`text-sm font-bold ${!active && today ? 'text-brand-500' : ''}`}>{d.getDate()}</span>
+                <span className={`mt-0.5 h-1.5 w-1.5 rounded-full ${count ? (active ? 'bg-white' : 'bg-brand-500') : 'bg-transparent'}`} />
+              </button>
+            )
+          })}
+        </div>
+        {date !== todayISO() && (
+          <div className="mt-2 text-center">
+            <button className="text-xs font-semibold text-brand-500" onClick={() => setDate(todayISO())}>Voltar para hoje</button>
+          </div>
+        )}
       </div>
 
-      {/* Columns by barber — rolagem horizontal no mobile, grade no desktop */}
-      <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:snap-none lg:overflow-visible lg:px-0 lg:pb-0 lg:[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
-        {barbers.map((b) => {
-          const list = dayAppointments.filter((a) => a.barberId === b.id)
-          return (
-            <div key={b.id} className="card w-[82vw] max-w-[320px] shrink-0 snap-start lg:w-auto lg:max-w-none">
-              <div className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
-                <Avatar name={b.name} color={b.color} size={34} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold">{b.name.split(' ')[0]}</p>
-                  <p className="truncate text-xs text-slate-400">{list.length} agendamento(s)</p>
+      {/* Filtro por barbeiro (dono) */}
+      {isOwner && barbers.length > 1 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <FilterChip active={barberFilter === 'all'} onClick={() => setBarberFilter('all')}>Todos</FilterChip>
+          {barbers.map((b) => (
+            <FilterChip key={b.id} active={barberFilter === b.id} onClick={() => setBarberFilter(b.id)}>
+              <Avatar name={b.name} color={b.color} size={18} /> {b.name.split(' ')[0]}
+            </FilterChip>
+          ))}
+        </div>
+      )}
+
+      {/* Lista de agendamentos do dia (ordenada por horário) */}
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={<Icon.calendar size={40} />}
+          title="Nenhum agendamento"
+          subtitle="Este dia está livre. Toque em Agendar para marcar um horário."
+          action={<button className="btn-primary" onClick={() => setModal(true)}><Icon.plus size={16} /> Agendar</button>}
+        />
+      ) : (
+        <div className="space-y-2.5">
+          {filtered.map((a) => {
+            const svcNames = serviceNamesOf(a, db.services)
+            const barber = db.users.find((u) => u.id === a.barberId)
+            const done = a.status !== 'agendado'
+            return (
+              <div key={a.id} className={`card !p-0 overflow-hidden ${done ? 'opacity-70' : ''}`}>
+                <div className="flex">
+                  {/* faixa de horário */}
+                  <div className="flex w-16 shrink-0 flex-col items-center justify-center bg-brand-500/10 py-3 text-brand-600 dark:text-brand-300">
+                    <span className="text-base font-extrabold leading-none">{fmtTime(a.datetime)}</span>
+                  </div>
+                  <div className="min-w-0 flex-1 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold">{a.clientName}</p>
+                        <p className="truncate text-xs text-slate-400">{svcNames.length ? svcNames.join(' + ') : 'Sem serviço'}</p>
+                      </div>
+                      <span className={`badge shrink-0 ${statusStyle[a.status]}`}>{a.status}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      {isOwner && (
+                        <span className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <Avatar name={barber?.name} color={barber?.color} size={18} /> {barber?.name?.split(' ')[0]}
+                        </span>
+                      )}
+                      <div className="ml-auto flex items-center gap-1.5">
+                        {a.status === 'agendado' && (
+                          <>
+                            <button onClick={() => concludeAppointment(a)} className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              Concluir
+                            </button>
+                            <button onClick={() => setStatus(a.id, 'cancelado')} className="rounded-lg bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
+                              Cancelar
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => { remove('appointments', a.id); toast.info('Agendamento removido.') }} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                          <Icon.trash size={15} />
+                        </button>
+                      </div>
+                    </div>
+                    {a.notes && <p className="mt-1.5 text-xs italic text-slate-400">{a.notes}</p>}
+                  </div>
                 </div>
               </div>
-              {list.length === 0 ? (
-                <p className="py-8 text-center text-xs text-slate-400">Livre neste dia</p>
-              ) : (
-                <div className="space-y-2">
-                  {list.map((a) => {
-                    const svcNames = serviceNamesOf(a, db.services)
-                    return (
-                      <div key={a.id} className="rounded-xl border border-slate-100 p-2.5 dark:border-slate-800">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-brand-500">{fmtTime(a.datetime)}</span>
-                          <span className={`badge ${statusStyle[a.status]}`}>{a.status}</span>
-                        </div>
-                        <p className="mt-1 text-sm font-semibold">{a.clientName}</p>
-                        <p className="text-xs text-slate-400">{svcNames.length ? svcNames.join(' + ') : 'Sem serviço'}</p>
-                        {a.notes && <p className="mt-1 text-xs italic text-slate-400">{a.notes}</p>}
-                        <div className="mt-2 flex gap-1.5">
-                          {a.status === 'agendado' && (
-                            <>
-                              <button onClick={() => concludeAppointment(a)} className="flex-1 rounded-lg bg-emerald-500/10 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                Concluir
-                              </button>
-                              <button onClick={() => setStatus(a.id, 'cancelado')} className="flex-1 rounded-lg bg-red-500/10 py-1 text-xs font-semibold text-red-600 dark:text-red-400">
-                                Cancelar
-                              </button>
-                            </>
-                          )}
-                          <button onClick={() => { remove('appointments', a.id); toast.info('Agendamento removido.') }} className="rounded-lg bg-slate-100 px-2 py-1 text-slate-500 dark:bg-slate-800">
-                            <Icon.trash size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
 
       <AppointmentModal
         open={modal}
@@ -160,6 +220,21 @@ export default function Agenda() {
         date={date}
       />
     </div>
+  )
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300'
+          : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 

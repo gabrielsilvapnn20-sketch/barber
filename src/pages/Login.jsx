@@ -41,11 +41,6 @@ export default function Login() {
     }
   }
 
-  const quickFill = (u) => {
-    setEmail(u.email)
-    setPassword(u.password)
-    setMode('password')
-  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 px-4 py-10">
@@ -150,27 +145,10 @@ export default function Login() {
           )}
         </div>
 
-        {/* Demo quick access */}
-        <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
-          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Acesso de demonstração
-          </p>
-          <div className="space-y-1.5">
-            {db.users.map((u) => (
-              <button
-                key={u.id}
-                onClick={() => quickFill(u)}
-                className="flex w-full items-center justify-between rounded-lg bg-slate-800/60 px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-800"
-              >
-                <span>
-                  <span className="font-semibold text-white">{u.name}</span>{' '}
-                  <span className="text-slate-500">({u.role === 'owner' ? 'Dono' : 'Barbeiro'})</span>
-                </span>
-                <span className="font-mono text-slate-500">PIN {u.pin}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="mt-5 text-center text-xs text-slate-500">
+          Cada barbeiro entra com seu próprio acesso. O dono gerencia os logins em
+          <span className="text-slate-400"> Equipe</span>.
+        </p>
       </div>
 
       <Modal

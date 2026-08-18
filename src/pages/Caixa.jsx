@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
@@ -14,6 +14,7 @@ export default function Caixa() {
   const toast = useToast()
   const [openModal, setOpenModal] = useState(false)
   const [closeModal, setCloseModal] = useState(false)
+  const [movModal, setMovModal] = useState(null) // 'sangria' | 'suprimento'
   const [opening, setOpening] = useState('0')
 
   const current = db.cashSessions.find((c) => c.status === 'aberto')
@@ -45,6 +46,28 @@ export default function Caixa() {
     return map
   }, [movement])
 
+  // Sangrias (retiradas) e suprimentos (reforços) da sessão atual
+  const sessionMovs = (db.cashMovements || [])
+    .filter((m) => m.sessionId === current?.id)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+  const sangriaTotal = sessionMovs.filter((m) => m.type === 'sangria').reduce((s, m) => s + (m.amount || 0), 0)
+  const suprimentoTotal = sessionMovs.filter((m) => m.type === 'suprimento').reduce((s, m) => s + (m.amount || 0), 0)
+  const expectedCash = (current?.opening || 0) + cashIn - sangriaTotal + suprimentoTotal
+
+  const registerMov = (type, amount, reason) => {
+    if (!current) return
+    addTo('cashMovements', {
+      sessionId: current.id,
+      type,
+      amount: Number(amount) || 0,
+      reason: reason || '',
+      date: new Date().toISOString(),
+      by: user.id,
+    })
+    toast.success(type === 'sangria' ? 'Sangria registrada.' : 'Suprimento registrado.')
+    setMovModal(null)
+  }
+
   const open = () => {
     addTo('cashSessions', {
       date: new Date().toISOString(),
@@ -60,13 +83,14 @@ export default function Caixa() {
   }
 
   const close = () => {
-    const expected = (current.opening || 0) + cashIn
     patch('cashSessions', current.id, {
       status: 'fechado',
-      closing: expected,
+      closing: expectedCash,
       closedAt: new Date().toISOString(),
       totalMovement: totalIn,
       cashMovement: cashIn,
+      sangriaTotal,
+      suprimentoTotal,
     })
     toast.success('Caixa fechado!')
     setCloseModal(false)
@@ -93,10 +117,18 @@ export default function Caixa() {
 
       {current ? (
         <>
-          <div className="card mb-4 border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20">
+          <div className="card mb-4 flex flex-wrap items-center justify-between gap-3 border-brand-200 bg-brand-50 dark:border-brand-800 dark:bg-brand-900/20">
             <div className="flex items-center gap-2 text-brand-600 dark:text-brand-300">
               <Icon.clock size={18} />
               <p className="font-semibold">Caixa aberto desde {fmtDateTime(current.date)}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setMovModal('sangria')} className="btn-ghost !py-2 !text-xs">
+                <Icon.download size={15} /> Sangria
+              </button>
+              <button onClick={() => setMovModal('suprimento')} className="btn-ghost !py-2 !text-xs">
+                <Icon.plus size={15} /> Suprimento
+              </button>
             </div>
           </div>
 
@@ -121,10 +153,40 @@ export default function Caixa() {
                     </div>
                   ))
                 )}
+                {sangriaTotal > 0 && (
+                  <div className="flex items-center justify-between rounded-xl bg-red-500/10 px-3 py-2.5 text-red-600 dark:text-red-400">
+                    <span className="text-sm font-medium">Sangrias (retiradas)</span>
+                    <span className="font-bold">- {brl(sangriaTotal)}</span>
+                  </div>
+                )}
+                {suprimentoTotal > 0 && (
+                  <div className="flex items-center justify-between rounded-xl bg-brand-500/10 px-3 py-2.5 text-brand-600 dark:text-brand-300">
+                    <span className="text-sm font-medium">Suprimentos (reforços)</span>
+                    <span className="font-bold">+ {brl(suprimentoTotal)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between rounded-xl bg-emerald-500/10 px-3 py-2.5 text-emerald-600 dark:text-emerald-400">
                   <span className="text-sm font-bold">Saldo esperado em caixa</span>
-                  <span className="font-extrabold">{brl((current.opening || 0) + cashIn)}</span>
+                  <span className="font-extrabold">{brl(expectedCash)}</span>
                 </div>
+                {sessionMovs.length > 0 && (
+                  <div className="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+                    <p className="mb-1 text-xs font-semibold uppercase text-slate-400">Sangrias / suprimentos</p>
+                    <div className="space-y-1">
+                      {sessionMovs.map((m) => (
+                        <div key={m.id} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">
+                            {fmtTime(m.date)} · {m.type === 'sangria' ? 'Sangria' : 'Suprimento'}
+                            {m.reason ? ` — ${m.reason}` : ''}
+                          </span>
+                          <span className={m.type === 'sangria' ? 'font-semibold text-red-500' : 'font-semibold text-brand-500'}>
+                            {m.type === 'sangria' ? '-' : '+'} {brl(m.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -181,14 +243,61 @@ export default function Caixa() {
         <div className="space-y-2 text-sm">
           <Row label="Fundo de troco" value={brl(current?.opening || 0)} />
           <Row label="Recebido em dinheiro" value={brl(cashIn)} />
-          <Row label="Total movimentado" value={brl(totalIn)} />
+          {sangriaTotal > 0 && <Row label="− Sangrias" value={`- ${brl(sangriaTotal)}`} />}
+          {suprimentoTotal > 0 && <Row label="+ Suprimentos" value={`+ ${brl(suprimentoTotal)}`} />}
+          <Row label="Total movimentado (vendas)" value={brl(totalIn)} />
           <div className="mt-2 flex items-center justify-between rounded-xl bg-emerald-500/10 px-3 py-3 text-emerald-600 dark:text-emerald-400">
             <span className="font-bold">Saldo esperado em caixa</span>
-            <span className="text-lg font-extrabold">{brl((current?.opening || 0) + cashIn)}</span>
+            <span className="text-lg font-extrabold">{brl(expectedCash)}</span>
           </div>
         </div>
       </Modal>
+
+      <CashMovementModal
+        type={movModal}
+        onClose={() => setMovModal(null)}
+        onConfirm={(amount, reason) => registerMov(movModal, amount, reason)}
+      />
     </div>
+  )
+}
+
+function CashMovementModal({ type, onClose, onConfirm }) {
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  useEffect(() => {
+    if (type) { setAmount(''); setReason('') }
+  }, [type])
+  if (!type) return null
+  const isSangria = type === 'sangria'
+  return (
+    <Modal
+      open={!!type}
+      onClose={onClose}
+      title={isSangria ? 'Sangria (retirada de dinheiro)' : 'Suprimento (reforço de caixa)'}
+      footer={
+        <>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className={isSangria ? 'btn-danger' : 'btn-primary'} onClick={() => Number(amount) > 0 && onConfirm(amount, reason)}>
+            Confirmar
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {isSangria
+            ? 'Retirada de dinheiro do caixa (ex.: pagar fornecedor, guardar excedente). Reduz o saldo esperado.'
+            : 'Entrada de dinheiro no caixa (ex.: reforço de troco). Aumenta o saldo esperado.'}
+        </p>
+        <Field label="Valor (R$)">
+          <input type="number" step="0.01" className="input" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+        </Field>
+        <Field label="Motivo">
+          <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={isSangria ? 'Ex: pagamento fornecedor' : 'Ex: reforço de troco'} />
+        </Field>
+      </div>
+    </Modal>
   )
 }
 
