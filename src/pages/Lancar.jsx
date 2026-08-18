@@ -374,11 +374,10 @@ function PaymentControl({ total, state, setState }) {
   )
 }
 
-function PackageModal({ open, onClose, clients, defaultClientId, services, categories, onSell }) {
+function PackageModal({ open, onClose, clients, defaultClientId, services, onSell }) {
   const [clientId, setClientId] = useState(defaultClientId || '')
   const [name, setName] = useState('Pacote Mensal')
-  const [items, setItems] = useState([]) // [{serviceId, qty}]
-  const [addSel, setAddSel] = useState('')
+  const [qtys, setQtys] = useState({}) // { serviceId: n }
   const [total, setTotal] = useState('')
   const [pay, setPay] = useState(emptyPay)
 
@@ -386,38 +385,48 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, categ
   useMemoOpen(open, () => {
     setClientId(defaultClientId || '')
     setName('Pacote Mensal')
-    setItems([])
-    setAddSel('')
+    setQtys({})
     setTotal('')
     setPay(emptyPay())
   })
 
   const svcById = (id) => services.find((s) => s.id === id)
+  const setQty = (id, n) => setQtys((q) => ({ ...q, [id]: n }))
+  const items = Object.entries(qtys)
+    .filter(([, n]) => n > 0)
+    .map(([serviceId, qty]) => ({ serviceId, qty }))
   const base = items.reduce((s, i) => s + (svcById(i.serviceId)?.price || 0) * i.qty, 0)
   const finalTotal = total !== '' ? +total : base
-  const add = (id) => {
-    if (!id) return
-    setItems((c) => {
-      const ex = c.find((i) => i.serviceId === id)
-      return ex ? c.map((i) => (i.serviceId === id ? { ...i, qty: i.qty + 1 } : i)) : [...c, { serviceId: id, qty: 1 }]
-    })
+
+  // Combos rápidos (usam Cabelo e Barba do catálogo, se existirem)
+  const findSvc = (re, notRe) => services.find((s) => re.test(s.name) && (!notRe || !notRe.test(s.name)))
+  const cabelo = svcById('srv_cabelo') || findSvc(/cabelo/i, /barba/i)
+  const barba = svcById('srv_barba') || findSvc(/^barba/i)
+  const presets = []
+  if (cabelo) {
+    presets.push({ label: '2 Cortes', map: { [cabelo.id]: 2 } })
+    presets.push({ label: '4 Cortes', map: { [cabelo.id]: 4 } })
   }
+  if (barba) presets.push({ label: '4 Barbas', map: { [barba.id]: 4 } })
+  if (cabelo && barba) {
+    presets.push({ label: '2 Corte + 4 Barba', map: { [cabelo.id]: 2, [barba.id]: 4 } })
+    presets.push({ label: '4 Corte + 4 Barba', map: { [cabelo.id]: 4, [barba.id]: 4 } })
+  }
+  const applyPreset = (map) => { setQtys({ ...map }); setTotal('') }
+
+  const resumo = items
+    .map((i) => `${i.qty}× ${svcById(i.serviceId)?.name}`)
+    .join(' + ')
 
   const submit = () => {
-    onSell({
-      clientId,
-      name,
-      items,
-      total: total !== '' ? +total : null,
-      payments: paymentsFromState(pay, finalTotal),
-    })
+    onSell({ clientId, name, items, total: total !== '' ? +total : null, payments: paymentsFromState(pay, finalTotal) })
   }
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Vender pacote / combo"
+      title="Vender combo / pacote"
       wide
       footer={
         <>
@@ -428,7 +437,7 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, categ
         </>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Cliente">
             <select className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
@@ -438,48 +447,74 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, categ
               ))}
             </select>
           </Field>
-          <Field label="Nome do pacote">
+          <Field label="Nome do combo">
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
         </div>
 
-        <Field label="Serviços do pacote">
-          <select className="input" value={addSel} onChange={(e) => { add(e.target.value); setAddSel('') }}>
-            <option value="">Adicionar serviço ao pacote…</option>
-            {Object.entries(groupByCat(services, categories)).map(([cat, list]) => (
-              <optgroup key={cat} label={cat}>
-                {list.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name} — {brl(s.price)}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </Field>
+        {/* Combos rápidos */}
+        {presets.length > 0 && (
+          <div>
+            <label className="label">Combos rápidos</label>
+            <div className="flex flex-wrap gap-2">
+              {presets.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => applyPreset(p.map)}
+                  className="rounded-full border border-brand-300 bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-600 hover:bg-brand-500/20 dark:border-brand-700 dark:text-brand-300"
+                >
+                  {p.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setQtys({})}
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                Limpar
+              </button>
+            </div>
+            <p className="mt-1 text-[11px] text-slate-400">Toque num combo pronto ou monte a quantidade abaixo.</p>
+          </div>
+        )}
 
-        {items.length > 0 && (
-          <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 px-3 dark:divide-slate-800 dark:border-slate-700">
-            {items.map((i) => {
-              const s = svcById(i.serviceId)
+        {/* Quantidade por serviço */}
+        <div>
+          <label className="label">Quantidade por serviço</label>
+          <div className="space-y-1.5">
+            {services.map((s) => {
+              const n = qtys[s.id] || 0
               return (
-                <div key={i.serviceId} className="flex items-center gap-3 py-2.5">
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{s?.name}</span>
-                  <Stepper value={i.qty} onChange={(q) => setItems((c) => c.map((x) => (x.serviceId === i.serviceId ? { ...x, qty: q } : x)))} />
-                  <span className="w-16 text-right text-sm font-bold">{brl((s?.price || 0) * i.qty)}</span>
-                  <button onClick={() => setItems((c) => c.filter((x) => x.serviceId !== i.serviceId))} className="text-slate-400 hover:text-red-500"><Icon.close size={16} /></button>
+                <div
+                  key={s.id}
+                  className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${n > 0 ? 'border-brand-300 bg-brand-500/5 dark:border-brand-800' : 'border-slate-200 dark:border-slate-700'}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{s.name}</p>
+                    <p className="text-xs text-slate-400">{brl(s.price)} cada</p>
+                  </div>
+                  {n > 0 && <span className="text-sm font-bold text-slate-400">{brl(s.price * n)}</span>}
+                  <Stepper value={n} min={0} onChange={(q) => setQty(s.id, q)} />
                 </div>
               )
             })}
           </div>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Valor do pacote (editável)">
-            <input type="number" step="0.01" className="input" placeholder={String(base)} value={total} onChange={(e) => setTotal(e.target.value)} />
-          </Field>
-          <div className="flex items-end">
-            <p className="text-xs text-slate-400">Sugestão pela soma: <b>{brl(base)}</b></p>
-          </div>
         </div>
+
+        {/* Resumo + valor */}
+        {items.length > 0 && (
+          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
+            <p className="text-sm font-semibold">{resumo}</p>
+            <div className="mt-2 flex items-end justify-between gap-3">
+              <div className="flex-1">
+                <label className="label">Valor do combo (editável)</label>
+                <input type="number" step="0.01" className="input" placeholder={String(base)} value={total} onChange={(e) => setTotal(e.target.value)} />
+              </div>
+              <p className="pb-2.5 text-xs text-slate-400">Soma: <b>{brl(base)}</b></p>
+            </div>
+          </div>
+        )}
 
         <PaymentControl total={finalTotal} state={pay} setState={setPay} />
       </div>
