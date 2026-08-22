@@ -9,7 +9,7 @@ import Icon from '../components/Icons.jsx'
 import { showLocalNotification } from '../lib/notifications.js'
 
 export default function Config() {
-  const { db, setDb, resetData, startFresh, patch } = useData()
+  const { db, setDb, resetData, startFresh, patch, syncStatus } = useData()
   const { theme, toggle } = useTheme()
   const { user } = useAuth()
   const toast = useToast()
@@ -127,6 +127,30 @@ export default function Config() {
               <Icon.download size={18} /> Instalar aplicativo
             </button>
           )}
+        </div>
+
+        <div className="card lg:col-span-2">
+          <div className="mb-1 flex items-center justify-between">
+            <h3 className="font-bold">Sincronização (nuvem)</h3>
+            {(() => {
+              const info = {
+                online: { label: 'Sincronizado', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+                connecting: { label: 'Conectando…', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+                error: { label: 'Sem conexão', cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+                offline: { label: 'Desativada', cls: 'bg-slate-200 text-slate-500 dark:bg-slate-700' },
+              }[syncStatus] || { label: '—', cls: 'bg-slate-200 text-slate-500' }
+              return <span className={`badge ${info.cls}`}>{info.label}</span>
+            })()}
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {syncStatus === 'online'
+              ? 'Os dados são compartilhados entre o dono e os barbeiros em tempo real.'
+              : syncStatus === 'error'
+                ? 'Sem conexão com a nuvem no momento — o app segue funcionando offline e sincroniza quando voltar.'
+                : syncStatus === 'connecting'
+                  ? 'Conectando à nuvem…'
+                  : 'Sincronização em nuvem não configurada.'}
+          </p>
         </div>
 
         <div className="card lg:col-span-2">

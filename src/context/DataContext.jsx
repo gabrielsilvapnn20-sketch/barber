@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { buildSeed, buildCatalog, buildTeam, CATALOG_VERSION, TEAM_VERSION } from '../lib/seed.js'
 import { uid, isSameDay, isSameMonth, monthKey } from '../lib/utils.js'
+import { supabaseEnabled, mergeDb, fetchRemote, pushRemote, subscribeRemote } from '../lib/sync.js'
 
 const DataContext = createContext(null)
 const KEY = 'barber.db.v1'
@@ -52,9 +53,79 @@ function load() {
 
 export function DataProvider({ children }) {
   const [db, setDb] = useState(load)
+  const [syncStatus, setSyncStatus] = useState(supabaseEnabled ? 'connecting' : 'offline')
+  const syncRef = useRef({ ready: false, lastRemote: null })
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(db))
+  }, [db])
+
+  // ---- Sincronização em nuvem (Supabase) ----
+  // O app funciona 100% offline; quando há conexão, os dados são
+  // compartilhados entre os aparelhos da barbearia (dono + barbeiros).
+  useEffect(() => {
+    if (!supabaseEnabled) return
+    let cancelled = false
+    let unsub = () => {}
+    ;(async () => {
+      try {
+        const remote = await fetchRemote()
+        if (cancelled) return
+        const syncedOnce = localStorage.getItem('barber.syncedOnce') === '1'
+        if (remote) {
+          // Se este aparelho nunca sincronizou, adota o que está na nuvem
+          // (evita "poluir" a nuvem com dados de demonstração locais).
+          setDb((local) => (syncedOnce ? mergeDb(local, remote) : remote))
+          syncRef.current.lastRemote = JSON.stringify(remote)
+        } else {
+          syncRef.current.lastRemote = '' // força o envio inicial para a nuvem
+        }
+        localStorage.setItem('barber.syncedOnce', '1')
+        syncRef.current.ready = true
+        setSyncStatus('online')
+        unsub = subscribeRemote((remoteData) => {
+          const s = JSON.stringify(remoteData)
+          if (s === syncRef.current.lastRemote) return // eco do meu próprio envio
+          syncRef.current.lastRemote = s
+          setDb((local) => mergeDb(local, remoteData))
+        })
+      } catch (e) {
+        console.warn('Sincronização indisponível (rodando offline):', e?.message)
+        setSyncStatus('error')
+      }
+    })()
+    return () => {
+      cancelled = true
+      unsub()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Envia mudanças locais para a nuvem (com debounce), preservando o que outro
+  // aparelho tiver enviado nesse meio-tempo.
+  useEffect(() => {
+    if (!supabaseEnabled || !syncRef.current.ready) return
+    const local = JSON.stringify(db)
+    if (local === syncRef.current.lastRemote) return
+    const t = setTimeout(async () => {
+      try {
+        const remote = await fetchRemote()
+        let toPush = db
+        if (remote && JSON.stringify(remote) !== syncRef.current.lastRemote) {
+          // A nuvem mudou desde a última vez: mescla (mudança local vence,
+          // mas mantém registros novos do outro aparelho).
+          toPush = mergeDb(remote, db)
+        }
+        await pushRemote(toPush)
+        syncRef.current.lastRemote = JSON.stringify(toPush)
+        setSyncStatus('online')
+        if (JSON.stringify(toPush) !== JSON.stringify(db)) setDb(toPush)
+      } catch (e) {
+        console.warn('Falha ao enviar para a nuvem:', e?.message)
+        setSyncStatus('error')
+      }
+    }, 700)
+    return () => clearTimeout(t)
   }, [db])
 
   // Generic collection updater
@@ -363,6 +434,7 @@ export function DataProvider({ children }) {
       redeemFromPackage,
       deleteTransaction,
       editSaleTransaction,
+      syncStatus,
       resetData: () => {
         const seed = buildSeed()
         setDb(seed)
@@ -404,7 +476,7 @@ export function DataProvider({ children }) {
           (p) => p.clientId === clientId && p.items.some((i) => i.qtyTotal - i.qtyUsed > 0),
         ),
     }),
-    [db, addTo, patch, remove, addTransaction, addSale, sellPackage, redeemFromPackage, deleteTransaction, editSaleTransaction],
+    [db, addTo, patch, remove, addTransaction, addSale, sellPackage, redeemFromPackage, deleteTransaction, editSaleTransaction, syncStatus],
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
