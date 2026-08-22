@@ -12,7 +12,7 @@ import {
 import { useData, barberMetrics } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
-import { StatCard, PageHeader, Segmented, Avatar } from '../components/ui.jsx'
+import { StatCard, PageHeader, Segmented, Avatar, PayTag } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
 import { brl, isSameDay, lastNDays, fmtTime, fmtDate, serviceNamesOf } from '../lib/utils.js'
 
@@ -143,8 +143,11 @@ export default function BarberDashboard() {
                 const client = db.clients.find((c) => c.id === t.clientId)
                 return (
                   <div key={t.id} className="flex items-center justify-between py-2.5">
-                    <div>
-                      <p className="text-sm font-semibold">{t.serviceName}</p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-semibold">{t.serviceName}</p>
+                        {t.price > 0 && <PayTag t={t} />}
+                      </div>
                       <p className="text-xs text-slate-400">
                         {client?.name || 'Cliente avulso'} · {fmtDate(t.date)}
                       </p>

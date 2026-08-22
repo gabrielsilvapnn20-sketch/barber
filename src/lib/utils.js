@@ -16,6 +16,27 @@ export const serviceNamesOf = (appointment, services = []) =>
     .map((id) => services.find((s) => s.id === id)?.name)
     .filter(Boolean)
 
+// ---- Pacotes / combos ----
+export const pkgIsExpired = (pkg) => !!pkg?.expiresAt && new Date(pkg.expiresAt) < new Date()
+export const pkgRemaining = (pkg) =>
+  (pkg?.items || []).reduce((s, i) => s + (i.qtyTotal - i.qtyUsed), 0)
+export const pkgTotalQty = (pkg) => (pkg?.items || []).reduce((s, i) => s + i.qtyTotal, 0)
+
+// Rótulo de forma de pagamento
+export const PAY_LABEL = {
+  pix: 'PIX',
+  dinheiro: 'Dinheiro',
+  debito: 'Débito',
+  credito: 'Crédito',
+  pacote: 'Pacote',
+  misto: 'Misto',
+}
+export const paymentLabelOf = (t) => {
+  if (t?.payments?.length > 1) return 'Misto'
+  const m = t?.payments?.[0]?.method || t?.paymentMethod
+  return PAY_LABEL[m] || m || '—'
+}
+
 export const brl = (v) =>
   (Number(v) || 0).toLocaleString('pt-BR', {
     style: 'currency',

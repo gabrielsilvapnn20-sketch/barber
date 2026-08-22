@@ -4,10 +4,10 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Avatar, Modal, Field, EmptyState } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { fmtDate, brl } from '../lib/utils.js'
+import { fmtDate, brl, pkgIsExpired } from '../lib/utils.js'
 
 export default function Clientes() {
-  const { db, addTo, patch, remove, onlyBarbers, owner } = useData()
+  const { db, addTo, patch, remove, activePackagesForClient, onlyBarbers, owner } = useData()
   const { user, isOwner } = useAuth()
   const toast = useToast()
   const [q, setQ] = useState('')
@@ -106,6 +106,25 @@ export default function Clientes() {
                     <span>{c.preferences}</span>
                   </p>
                 )}
+                {activePackagesForClient(c.id).map((pkg) => {
+                  const expired = pkgIsExpired(pkg)
+                  return (
+                    <div key={pkg.id} className={`mt-2 rounded-lg p-2 text-xs ${expired ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'}`}>
+                      <div className="mb-1 flex items-center justify-between gap-2 font-semibold">
+                        <span className="flex items-center gap-1"><Icon.tag size={12} /> {pkg.name}</span>
+                        <span className="text-[10px] font-medium opacity-80">
+                          {pkg.mode === 'mensal' ? (expired ? `vencido ${fmtDate(pkg.expiresAt)}` : `vence ${fmtDate(pkg.expiresAt)}`) : 'sem prazo'}
+                        </span>
+                      </div>
+                      {pkg.items.map((i) => (
+                        <div key={i.serviceId} className="flex justify-between">
+                          <span>{i.serviceName}</span>
+                          <span>{i.qtyUsed}/{i.qtyTotal} · restam {i.qtyTotal - i.qtyUsed}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
                 {c.notes && <p className="mt-2 text-xs italic text-slate-400">"{c.notes}"</p>}
               </div>
             )

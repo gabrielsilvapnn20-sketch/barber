@@ -192,7 +192,7 @@ export function DataProvider({ children }) {
   // Vende um pacote/combo: cria o pacote com saldos por serviço e registra a
   // transação financeira da venda (valor editável, pagamento único ou dividido).
   const sellPackage = useCallback(
-    ({ barberId, clientId, name, items, total, payments, date }) => {
+    ({ barberId, clientId, name, items, total, payments, date, mode = 'livre', validDays = 30 }) => {
       const norm = (items || [])
         .filter((i) => (i.qty || 0) > 0)
         .map((i) => {
@@ -210,6 +210,13 @@ export function DataProvider({ children }) {
       const base = norm.reduce((s, i) => s + i.unitPrice * i.qtyTotal, 0)
       const finalTotal = total != null && total !== '' ? +total : base
       const when = date || new Date().toISOString()
+      // Mensal vence em N dias; "livre" não tem prazo (usa quando quiser)
+      let expiresAt = null
+      if (mode === 'mensal') {
+        const d = new Date(when)
+        d.setDate(d.getDate() + (validDays || 30))
+        expiresAt = d.toISOString()
+      }
       const pkg = {
         id: uid('pkg'),
         clientId,
@@ -218,6 +225,8 @@ export function DataProvider({ children }) {
         total: finalTotal,
         soldBy: barberId,
         createdAt: when,
+        mode,
+        expiresAt,
         status: 'ativo',
       }
       update('packages', (list) => [pkg, ...list])

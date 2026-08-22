@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
-import { PageHeader, Avatar, Modal, Field, Accordion, Stepper } from '../components/ui.jsx'
+import { PageHeader, Avatar, Modal, Field, Accordion, Stepper, PayTag } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { brl, fmtTime } from '../lib/utils.js'
+import { brl, fmtTime, fmtDate, pkgIsExpired, paymentLabelOf } from '../lib/utils.js'
 
 const PAY_METHODS = [
   { v: 'pix', l: 'PIX' },
@@ -147,36 +147,50 @@ export default function Lancar() {
             </select>
           </Field>
 
-          {/* Combo ativo do cliente */}
-          {activePkgs.length > 0 && (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800/60 dark:bg-emerald-900/20">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-300">
-                <Icon.tag size={13} /> Pacote ativo
-              </p>
-              <div className="space-y-2">
-                {activePkgs.map((pkg) =>
-                  pkg.items
-                    .filter((i) => i.qtyTotal - i.qtyUsed > 0)
-                    .map((i) => (
+          {/* Combos ativos do cliente */}
+          {activePkgs.map((pkg) => {
+            const expired = pkgIsExpired(pkg)
+            return (
+              <div key={pkg.id} className={`rounded-xl border p-3 ${expired ? 'border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-900/20' : 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-900/20'}`}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className={`flex items-center gap-1.5 text-xs font-bold uppercase ${expired ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                    <Icon.tag size={13} /> {pkg.name}
+                  </p>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {pkg.mode === 'mensal'
+                      ? expired ? `Vencido ${fmtDate(pkg.expiresAt)}` : `Vence ${fmtDate(pkg.expiresAt)}`
+                      : 'Sem prazo'}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {pkg.items.map((i) => {
+                    const restam = i.qtyTotal - i.qtyUsed
+                    return (
                       <div key={pkg.id + i.serviceId} className="flex items-center justify-between gap-2">
                         <span className="text-sm">
-                          Restam <b>{i.qtyTotal - i.qtyUsed}</b> {i.serviceName}
+                          <b>{i.serviceName}</b> · {i.qtyUsed}/{i.qtyTotal} usados{' '}
+                          <span className={restam > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}>
+                            (restam {restam})
+                          </span>
                         </span>
-                        <button
-                          onClick={() => redeem(pkg, i.serviceId, i.serviceName)}
-                          className="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-600"
-                        >
-                          Abater 1
-                        </button>
+                        {restam > 0 && !expired && (
+                          <button
+                            onClick={() => redeem(pkg, i.serviceId, i.serviceName)}
+                            className="shrink-0 rounded-lg bg-emerald-500 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-600"
+                          >
+                            Abater 1
+                          </button>
+                        )}
                       </div>
-                    )),
-                )}
+                    )
+                  })}
+                </div>
+                <p className={`mt-2 text-[11px] ${expired ? 'text-amber-700/80 dark:text-amber-300/70' : 'text-emerald-700/80 dark:text-emerald-300/70'}`}>
+                  {expired ? 'Pacote vencido — o abatimento está bloqueado.' : 'Abater usa o saldo já pago — não gera cobrança.'}
+                </p>
               </div>
-              <p className="mt-2 text-[11px] text-emerald-700/80 dark:text-emerald-300/70">
-                Abater usa o saldo já pago — não gera cobrança.
-              </p>
-            </div>
-          )}
+            )
+          })}
         </div>
 
         {/* Serviços (carrinho) */}
@@ -278,6 +292,7 @@ export default function Lancar() {
                       {t.type === 'package' && <span className="ml-1 text-brand-500">(combo)</span>}
                       {t.edited && <span className="ml-1 text-[10px] text-amber-500">editado</span>}
                     </p>
+                    {t.price > 0 && <PayTag t={t} />}
                   </div>
                   <span className="text-sm font-semibold">{t.price > 0 ? brl(t.price) : '—'}</span>
                   {t.type === 'service' && (
@@ -461,6 +476,7 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, onSel
   const [qtys, setQtys] = useState({}) // { serviceId: n }
   const [total, setTotal] = useState('')
   const [pay, setPay] = useState(emptyPay)
+  const [mode, setMode] = useState('livre') // 'mensal' | 'livre'
 
   // reinicia ao abrir
   useMemoOpen(open, () => {
@@ -469,6 +485,7 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, onSel
     setQtys({})
     setTotal('')
     setPay(emptyPay())
+    setMode('livre')
   })
 
   const svcById = (id) => services.find((s) => s.id === id)
@@ -500,7 +517,7 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, onSel
     .join(' + ')
 
   const submit = () => {
-    onSell({ clientId, name, items, total: total !== '' ? +total : null, payments: paymentsFromState(pay, finalTotal) })
+    onSell({ clientId, name, items, total: total !== '' ? +total : null, payments: paymentsFromState(pay, finalTotal), mode })
   }
 
   return (
@@ -532,6 +549,28 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, onSel
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
         </div>
+
+        {/* Tipo do combo */}
+        <Field label="Validade">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMode('livre')}
+              className={`rounded-xl border p-3 text-left ${mode === 'livre' ? 'border-brand-500 bg-brand-500/10' : 'border-slate-200 dark:border-slate-700'}`}
+            >
+              <p className="text-sm font-bold">Livre</p>
+              <p className="text-xs text-slate-400">Usa quando quiser, sem prazo</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('mensal')}
+              className={`rounded-xl border p-3 text-left ${mode === 'mensal' ? 'border-brand-500 bg-brand-500/10' : 'border-slate-200 dark:border-slate-700'}`}
+            >
+              <p className="text-sm font-bold">Mensal</p>
+              <p className="text-xs text-slate-400">Vence em 30 dias</p>
+            </button>
+          </div>
+        </Field>
 
         {/* Combos rápidos */}
         {presets.length > 0 && (

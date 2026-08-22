@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'react'
-import { initials, colorFrom } from '../lib/utils.js'
+import { initials, colorFrom, paymentLabelOf } from '../lib/utils.js'
 import Icon from './Icons.jsx'
+
+// Etiqueta leve da forma de pagamento de um lançamento
+export function PayTag({ t, className = '' }) {
+  const label = paymentLabelOf(t)
+  const tone =
+    {
+      PIX: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
+      Dinheiro: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+      Débito: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+      Crédito: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+      Misto: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+      Pacote: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+    }[label] || 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${tone} ${className}`}>
+      {label}
+    </span>
+  )
+}
 
 export function Avatar({ name = '', color, size = 40, src }) {
   const bg = color || colorFrom(name)

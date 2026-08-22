@@ -14,7 +14,7 @@ import {
 } from 'recharts'
 import { useData, ownerMetrics, txInPeriod } from '../context/DataContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
-import { PageHeader, Segmented, StatCard } from '../components/ui.jsx'
+import { PageHeader, Segmented, StatCard, PayTag } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
 import { brl, fmtDate, fmtTime } from '../lib/utils.js'
 import { exportCSV, exportPDF } from '../lib/reports.js'
@@ -213,7 +213,12 @@ export default function Financeiro() {
                 <tr key={t.id}>
                   <td className="py-2 pr-4 text-slate-400">{fmtDate(t.date).slice(0, 5)} {fmtTime(t.date)}</td>
                   <td className="py-2 pr-4">{db.users.find((u) => u.id === t.barberId)?.name?.split(' ')[0]}</td>
-                  <td className="py-2 pr-4 font-medium">{t.serviceName}</td>
+                  <td className="py-2 pr-4 font-medium">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate">{t.serviceName}</span>
+                      {t.price > 0 && <PayTag t={t} />}
+                    </span>
+                  </td>
                   <td className="py-2 pr-4 text-slate-400">{db.clients.find((c) => c.id === t.clientId)?.name || 'Avulso'}</td>
                   <td className="py-2 pr-4 text-right font-semibold">{brl(t.price)}</td>
                   <td className="py-2 text-right text-emerald-500">{brl(t.barberShare)}</td>
