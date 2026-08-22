@@ -55,10 +55,20 @@ export function DataProvider({ children }) {
   const [db, setDb] = useState(load)
   const [syncStatus, setSyncStatus] = useState(supabaseEnabled ? 'connecting' : 'offline')
   const syncRef = useRef({ ready: false, lastRemote: null })
+  const dbRef = useRef(db)
 
   useEffect(() => {
+    dbRef.current = db
     localStorage.setItem(KEY, JSON.stringify(db))
   }, [db])
+
+  // Aplica dados vindos da nuvem, mesclando com o que existe localmente.
+  const applyRemote = useCallback((remoteData) => {
+    const s = JSON.stringify(remoteData)
+    if (s === syncRef.current.lastRemote) return
+    syncRef.current.lastRemote = s
+    setDb((local) => mergeDb(local, remoteData))
+  }, [])
 
   // ---- Sincronização em nuvem (Supabase) ----
   // O app funciona 100% offline; quando há conexão, os dados são
@@ -67,28 +77,47 @@ export function DataProvider({ children }) {
     if (!supabaseEnabled) return
     let cancelled = false
     let unsub = () => {}
+    let pollId = null
     ;(async () => {
       try {
         const remote = await fetchRemote()
         if (cancelled) return
+        const local = dbRef.current
         const syncedOnce = localStorage.getItem('barber.syncedOnce') === '1'
         if (remote) {
-          // Se este aparelho nunca sincronizou, adota o que está na nuvem
-          // (evita "poluir" a nuvem com dados de demonstração locais).
-          setDb((local) => (syncedOnce ? mergeDb(local, remote) : remote))
+          // Aparelho que nunca sincronizou adota a nuvem (evita subir dados de
+          // demonstração locais); os demais mesclam para preservar mudanças.
+          const next = syncedOnce ? mergeDb(local, remote) : remote
           syncRef.current.lastRemote = JSON.stringify(remote)
+          if (JSON.stringify(next) !== JSON.stringify(local)) setDb(next)
+          // Se a mescla trouxe itens locais que a nuvem não tinha, envia.
+          if (syncedOnce && JSON.stringify(next) !== JSON.stringify(remote)) {
+            await pushRemote(next)
+            syncRef.current.lastRemote = JSON.stringify(next)
+          }
         } else {
-          syncRef.current.lastRemote = '' // força o envio inicial para a nuvem
+          // Nuvem vazia: este aparelho vira a base — envia o estado atual.
+          await pushRemote(local)
+          syncRef.current.lastRemote = JSON.stringify(local)
         }
         localStorage.setItem('barber.syncedOnce', '1')
         syncRef.current.ready = true
         setSyncStatus('online')
-        unsub = subscribeRemote((remoteData) => {
-          const s = JSON.stringify(remoteData)
-          if (s === syncRef.current.lastRemote) return // eco do meu próprio envio
-          syncRef.current.lastRemote = s
-          setDb((local) => mergeDb(local, remoteData))
-        })
+
+        // Tempo real
+        unsub = subscribeRemote((remoteData) => applyRemote(remoteData))
+
+        // Fallback: verifica a nuvem a cada 12s (caso o tempo real seja
+        // bloqueado por alguma rede de celular).
+        pollId = setInterval(async () => {
+          try {
+            const r = await fetchRemote()
+            if (r) applyRemote(r)
+            setSyncStatus('online')
+          } catch {
+            setSyncStatus('error')
+          }
+        }, 12000)
       } catch (e) {
         console.warn('Sincronização indisponível (rodando offline):', e?.message)
         setSyncStatus('error')
@@ -97,9 +126,10 @@ export function DataProvider({ children }) {
     return () => {
       cancelled = true
       unsub()
+      if (pollId) clearInterval(pollId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [applyRemote])
 
   // Envia mudanças locais para a nuvem (com debounce), preservando o que outro
   // aparelho tiver enviado nesse meio-tempo.
