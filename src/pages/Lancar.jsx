@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
-import { PageHeader, Avatar, Modal, Field, Accordion, Stepper, PayTag } from '../components/ui.jsx'
+import { PageHeader, Avatar, Modal, Field, Accordion, Stepper, PayTag, ClientSelect } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
 import { brl, fmtTime, fmtDate, pkgIsExpired, paymentLabelOf } from '../lib/utils.js'
 
@@ -139,12 +139,7 @@ export default function Lancar() {
             </Field>
           )}
           <Field label="Cliente">
-            <select className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-              <option value="">Cliente avulso</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <ClientSelect value={clientId} onChange={setClientId} clients={clients} />
           </Field>
 
           {/* Combos ativos do cliente */}
@@ -538,12 +533,7 @@ function PackageModal({ open, onClose, clients, defaultClientId, services, onSel
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Cliente">
-            <select className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-              <option value="">Selecione</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <ClientSelect value={clientId} onChange={setClientId} clients={clients} allowAvulso={false} placeholder="Selecione o cliente" />
           </Field>
           <Field label="Nome do combo">
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} />

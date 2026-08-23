@@ -155,6 +155,73 @@ export function Progress({ value, max, tone = 'bg-brand-500' }) {
   )
 }
 
+// Seletor de cliente com busca por nome/telefone
+export function ClientSelect({ value, onChange, clients = [], allowAvulso = true, placeholder = 'Selecionar cliente' }) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const selected = clients.find((c) => c.id === value)
+  const term = q.trim().toLowerCase()
+  const filtered = term
+    ? clients.filter((c) => c.name.toLowerCase().includes(term) || (c.phone || '').includes(term))
+    : clients
+  const label = selected ? selected.name : allowAvulso && !value ? 'Cliente avulso' : placeholder
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen((o) => !o); setQ('') }}
+        className="input flex w-full items-center justify-between text-left"
+      >
+        <span className={selected ? '' : 'text-slate-400'}>{label}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-slate-400"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 z-40 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+              <Icon.search size={16} />
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar por nome ou telefone…"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto py-1">
+              {allowAvulso && (
+                <button
+                  type="button"
+                  onClick={() => { onChange(''); setOpen(false); setQ('') }}
+                  className="flex w-full items-center px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                >
+                  Cliente avulso
+                </button>
+              )}
+              {filtered.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => { onChange(c.id); setOpen(false); setQ('') }}
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800/60 ${c.id === value ? 'bg-brand-500/10' : ''}`}
+                >
+                  <span className="truncate font-medium">{c.name}</span>
+                  {c.phone && <span className="shrink-0 text-xs text-slate-400">{c.phone}</span>}
+                </button>
+              ))}
+              {filtered.length === 0 && (
+                <p className="px-3 py-3 text-center text-sm text-slate-400">Nenhum cliente encontrado.</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export function Field({ label, children }) {
   return (
     <div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
-import { PageHeader, StatCard, Modal, Field } from '../components/ui.jsx'
+import { PageHeader, StatCard, Modal, Field, PayTag } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
 import { brl, fmtDate, fmtDateTime, fmtTime, isSameDay } from '../lib/utils.js'
 
@@ -19,10 +19,16 @@ export default function Caixa() {
 
   const current = db.cashSessions.find((c) => c.status === 'aberto')
 
-  // Movement since the current session opened (or today)
+  // Movimentações do caixa: só as de HOJE, desde a abertura, e que envolvem
+  // dinheiro de verdade (abatimento de pacote não entra — foi pago antes).
   const sinceDate = current ? new Date(current.date) : new Date(new Date().setHours(0, 0, 0, 0))
   const movement = useMemo(
-    () => db.transactions.filter((t) => new Date(t.date) >= sinceDate),
+    () =>
+      db.transactions.filter((t) => {
+        if (t.type === 'redemption') return false
+        const d = new Date(t.date)
+        return d >= sinceDate && isSameDay(d, new Date())
+      }),
     [db.transactions, current],
   )
   // Divide cada venda pelas formas de pagamento (suporta pagamento misto)
@@ -191,17 +197,34 @@ export default function Caixa() {
             </div>
 
             <div className="card">
-              <h3 className="mb-3 font-bold">Movimentações</h3>
-              <div className="max-h-72 space-y-1.5 overflow-y-auto">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-bold">Movimentações de hoje</h3>
+                <span className="text-xs text-slate-400">{movement.length} venda(s)</span>
+              </div>
+              <div className="max-h-80 space-y-1 overflow-y-auto">
                 {movement.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-slate-400">Nenhuma movimentação.</p>
+                  <p className="py-6 text-center text-sm text-slate-400">Nenhuma venda hoje ainda.</p>
                 ) : (
-                  movement.slice().reverse().map((t) => (
-                    <div key={t.id} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">{fmtTime(t.date)} · {t.serviceName}</span>
-                      <span className="font-semibold">+{brl(t.price)}</span>
-                    </div>
-                  ))
+                  movement
+                    .slice()
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map((t) => {
+                      const client = db.clients.find((c) => c.id === t.clientId)
+                      return (
+                        <div key={t.id} className="flex items-center justify-between gap-2 rounded-lg px-1 py-1.5">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm">
+                              <span className="text-slate-400">{fmtTime(t.date)}</span> {t.serviceName}
+                            </p>
+                            <p className="truncate text-xs text-slate-400">{client?.name || 'Cliente avulso'}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <PayTag t={t} />
+                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">+{brl(t.price)}</span>
+                          </div>
+                        </div>
+                      )
+                    })
                 )}
               </div>
             </div>
