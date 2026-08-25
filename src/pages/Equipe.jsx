@@ -257,9 +257,11 @@ function SettlementModal({ barber, db, onClose, onPay, onRemove }) {
             </Field>
             <Field label="Forma">
               <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
-                {Object.entries(PAY_LABEL).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
+                {Object.entries(PAY_LABEL)
+                  .filter(([k]) => k !== 'pacote' && k !== 'misto')
+                  .map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
               </select>
             </Field>
           </div>

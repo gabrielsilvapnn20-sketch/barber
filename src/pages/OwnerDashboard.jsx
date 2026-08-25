@@ -15,6 +15,7 @@ import {
 import { useData, ownerMetrics, rankingThisMonth, txInPeriod } from '../context/DataContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
 import { StatCard, PageHeader, Segmented, Avatar, Progress } from '../components/ui.jsx'
+import OnboardingCard from '../components/OnboardingCard.jsx'
 import Icon from '../components/Icons.jsx'
 import { brl, isSameDay, lastNDays, fmtTime, fmtDate, monthKey, todayISO, serviceNamesOf } from '../lib/utils.js'
 
@@ -75,6 +76,8 @@ export default function OwnerDashboard() {
           />
         }
       />
+
+      <OnboardingCard />
 
       {/* Custom date range */}
       {period === 'custom' && (

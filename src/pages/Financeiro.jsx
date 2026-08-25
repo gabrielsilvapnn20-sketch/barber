@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer,
   PieChart,
@@ -14,18 +14,21 @@ import {
 } from 'recharts'
 import { useData, ownerMetrics, txInPeriod } from '../context/DataContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
-import { PageHeader, Segmented, StatCard, PayTag } from '../components/ui.jsx'
+import { useToast } from '../context/ToastContext.jsx'
+import { PageHeader, Segmented, StatCard, PayTag, Modal, Field } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { brl, fmtDate, fmtTime } from '../lib/utils.js'
+import { brl, fmtDate, fmtTime, PAY_LABEL } from '../lib/utils.js'
 import { exportCSV, exportPDF } from '../lib/reports.js'
 
 const COLORS = ['#0ea5e9', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#14b8a6', '#f97316']
 const payLabel = { pix: 'PIX', dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito', pacote: 'Pacote', misto: 'Misto' }
 
 export default function Financeiro() {
-  const { db } = useData()
+  const { db, deleteTransaction, editSaleTransaction } = useData()
   const { theme } = useTheme()
+  const toast = useToast()
   const [period, setPeriod] = useState('month')
+  const [editTx, setEditTx] = useState(null)
 
   const txs = useMemo(() => txInPeriod(db.transactions, period), [db.transactions, period])
   const m = useMemo(() => ownerMetrics(db, period), [db, period])
@@ -66,6 +69,18 @@ export default function Financeiro() {
       Barbeiro: +r.Barbeiro.toFixed(2),
     }))
   }, [txs, db.users])
+
+  const estornar = (t) => {
+    const msg =
+      t.type === 'package'
+        ? 'Estornar a venda deste pacote? O pacote e os abatimentos ligados a ele serão removidos.'
+        : t.type === 'redemption'
+          ? 'Excluir este abatimento? O saldo será devolvido ao pacote do cliente.'
+          : 'Estornar/excluir este lançamento? Esta ação não pode ser desfeita.'
+    if (!confirm(msg)) return
+    deleteTransaction(t.id)
+    toast.info('Lançamento estornado.')
+  }
 
   const grid = theme === 'dark' ? '#1e293b' : '#e2e8f0'
   const axis = theme === 'dark' ? '#64748b' : '#94a3b8'
@@ -205,7 +220,8 @@ export default function Financeiro() {
                 <th className="pb-2 pr-4">Serviço</th>
                 <th className="pb-2 pr-4">Cliente</th>
                 <th className="pb-2 pr-4 text-right">Valor</th>
-                <th className="pb-2 text-right">Barbeiro</th>
+                <th className="pb-2 pr-4 text-right">Barbeiro</th>
+                <th className="pb-2 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -221,7 +237,27 @@ export default function Financeiro() {
                   </td>
                   <td className="py-2 pr-4 text-slate-400">{db.clients.find((c) => c.id === t.clientId)?.name || 'Avulso'}</td>
                   <td className="py-2 pr-4 text-right font-semibold">{brl(t.price)}</td>
-                  <td className="py-2 text-right text-emerald-500">{brl(t.barberShare)}</td>
+                  <td className="py-2 pr-4 text-right text-emerald-500">{brl(t.barberShare)}</td>
+                  <td className="py-2 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {t.type !== 'redemption' && t.type !== 'package' && (
+                        <button
+                          onClick={() => setEditTx(t)}
+                          title="Editar valor/pagamento"
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-500 dark:hover:bg-slate-800"
+                        >
+                          <Icon.edit size={15} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => estornar(t)}
+                        title="Estornar / excluir"
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-500 dark:hover:bg-slate-800"
+                      >
+                        <Icon.trash size={15} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -229,6 +265,67 @@ export default function Financeiro() {
           {txs.length === 0 && <p className="py-8 text-center text-sm text-slate-400">Nenhum lançamento no período.</p>}
         </div>
       </div>
+
+      <EditTxModal
+        tx={editTx}
+        onClose={() => setEditTx(null)}
+        onSave={({ total, method }) => {
+          editSaleTransaction(editTx.id, { total, payments: [{ method, amount: +total }] })
+          toast.success('Lançamento atualizado.')
+          setEditTx(null)
+        }}
+      />
     </div>
+  )
+}
+
+// Edição rápida de valor e forma de pagamento de um lançamento
+function EditTxModal({ tx, onClose, onSave }) {
+  const [total, setTotal] = useState('')
+  const [method, setMethod] = useState('pix')
+  useEffect(() => {
+    if (tx) {
+      setTotal(String(tx.price ?? ''))
+      setMethod(tx.payments?.length === 1 ? tx.payments[0].method : tx.paymentMethod || 'pix')
+    }
+  }, [tx])
+  if (!tx) return null
+  return (
+    <Modal
+      open={!!tx}
+      onClose={onClose}
+      title="Editar lançamento"
+      footer={
+        <>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn-primary" onClick={() => +total > 0 && onSave({ total: +total, method })}>Salvar</button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-slate-500 dark:text-slate-400">{tx.serviceName}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Valor (R$)">
+            <input
+              className="input"
+              inputMode="decimal"
+              value={total}
+              onChange={(e) => setTotal(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))}
+              autoFocus
+            />
+          </Field>
+          <Field label="Forma de pagamento">
+            <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
+              {Object.entries(PAY_LABEL)
+                .filter(([k]) => k !== 'pacote' && k !== 'misto')
+                .map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+            </select>
+          </Field>
+        </div>
+        <p className="text-xs text-slate-400">A comissão do barbeiro é recalculada automaticamente sobre o novo valor.</p>
+      </div>
+    </Modal>
   )
 }

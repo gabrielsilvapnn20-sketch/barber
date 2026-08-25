@@ -533,6 +533,7 @@ export function DataProvider({ children }) {
           commissionPayments: [],
           clients: [],
           users: prev.users.map((u) => ({ ...u, lastVisit: undefined })),
+          settings: { ...prev.settings, freshStarted: true },
         }))
         // limpa o histórico de notificações já enviadas
         Object.keys(localStorage)

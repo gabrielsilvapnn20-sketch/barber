@@ -118,7 +118,7 @@ export default function Lancar() {
     <div>
       <PageHeader
         title="Checkout"
-        subtitle="Feche o atendimento"
+        subtitle="Registre um atendimento já feito e receba (horário futuro? use a Agenda)"
         action={
           <button className="btn-ghost" onClick={() => setPkgModal(true)}>
             <Icon.tag size={16} /> Vender pacote
