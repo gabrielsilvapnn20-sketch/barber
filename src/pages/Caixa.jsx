@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, StatCard, Modal, Field, PayTag } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
 import { brl, fmtDate, fmtDateTime, fmtTime, isSameDay } from '../lib/utils.js'
+import { shareWhatsApp, exportPDF } from '../lib/reports.js'
 
 const payLabel = { pix: 'PIX', dinheiro: 'Dinheiro', debito: 'Débito', credito: 'Crédito', pacote: 'Pacote', misto: 'Misto' }
 
@@ -51,6 +52,66 @@ export default function Caixa() {
     }
     return map
   }, [movement])
+
+  // Faturamento e comissão por barbeiro (movimentações de hoje)
+  const byBarber = useMemo(() => {
+    const map = {}
+    for (const t of movement) {
+      const u = db.users.find((x) => x.id === t.barberId)
+      const name = u?.name || 'Barbeiro'
+      map[t.barberId] = map[t.barberId] || { name, total: 0, commission: 0, count: 0 }
+      map[t.barberId].total += t.price
+      map[t.barberId].commission += t.barberShare || 0
+      map[t.barberId].count += 1
+    }
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  }, [movement, db.users])
+
+  // Monta o texto/linhas do relatório de fechamento do dia.
+  const buildReport = () => {
+    const shop = db.settings?.shopName || 'Barbearia'
+    const today = fmtDate(new Date())
+    const summary = [
+      { label: 'Faturamento', value: brl(totalIn) },
+      { label: 'Atendimentos', value: String(movement.length) },
+      { label: 'Em dinheiro', value: brl(cashIn) },
+      { label: 'Saldo em caixa', value: brl(expectedCash) },
+    ]
+    const rows = byBarber.map((b) => ({
+      Barbeiro: b.name,
+      Atendimentos: b.count,
+      Faturamento: brl(b.total),
+      Comissão: brl(b.commission),
+    }))
+    return { shop, today, summary, rows }
+  }
+
+  const shareReport = () => {
+    const { shop, today } = buildReport()
+    const lines = [
+      `*${shop}* — Fechamento do dia`,
+      today,
+      '',
+      `Faturamento: ${brl(totalIn)}`,
+      `Atendimentos: ${movement.length}`,
+      '',
+      '*Por forma de pagamento:*',
+      ...Object.entries(byMethod).map(([k, v]) => `• ${payLabel[k] || k}: ${brl(v)}`),
+    ]
+    if (sangriaTotal > 0) lines.push(`• Sangrias: - ${brl(sangriaTotal)}`)
+    if (suprimentoTotal > 0) lines.push(`• Suprimentos: + ${brl(suprimentoTotal)}`)
+    lines.push('', '*Por barbeiro:*')
+    for (const b of byBarber) {
+      lines.push(`• ${b.name}: ${brl(b.total)} (${b.count} atend.) — comissão ${brl(b.commission)}`)
+    }
+    lines.push('', `Saldo esperado em caixa: ${brl(expectedCash)}`)
+    shareWhatsApp(lines.join('\n'))
+  }
+
+  const pdfReport = () => {
+    const { shop, today, summary, rows } = buildReport()
+    exportPDF({ title: 'Fechamento do dia', shopName: shop, period: today, summary, rows })
+  }
 
   // Sangrias (retiradas) e suprimentos (reforços) da sessão atual
   const sessionMovs = (db.cashMovements || [])
@@ -228,6 +289,35 @@ export default function Caixa() {
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="mt-4 card">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-bold">Relatório do dia</h3>
+              <div className="flex gap-2">
+                <button className="btn-primary !bg-emerald-500 hover:!bg-emerald-600 !py-2 !text-xs" onClick={shareReport}>
+                  <Icon.phone size={15} /> WhatsApp
+                </button>
+                <button className="btn-ghost !py-2 !text-xs" onClick={pdfReport}>
+                  <Icon.download size={15} /> PDF
+                </button>
+              </div>
+            </div>
+            {byBarber.length === 0 ? (
+              <p className="py-4 text-center text-sm text-slate-400">Sem atendimentos para o relatório ainda.</p>
+            ) : (
+              <div className="space-y-2">
+                {byBarber.map((b) => (
+                  <div key={b.name} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-800/50">
+                    <div>
+                      <p className="text-sm font-semibold">{b.name}</p>
+                      <p className="text-xs text-slate-400">{b.count} atend. · comissão {brl(b.commission)}</p>
+                    </div>
+                    <span className="font-bold">{brl(b.total)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </>
       ) : (

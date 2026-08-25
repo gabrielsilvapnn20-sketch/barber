@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext.jsx'
 import Layout from './components/Layout.jsx'
 import InstallGate from './components/InstallGate.jsx'
 import NotificationEngine from './components/NotificationEngine.jsx'
+import UpdatePrompt from './components/UpdatePrompt.jsx'
 import Login from './pages/Login.jsx'
 import OwnerDashboard from './pages/OwnerDashboard.jsx'
 import BarberDashboard from './pages/BarberDashboard.jsx'
@@ -16,6 +17,7 @@ import Despesas from './pages/Despesas.jsx'
 import Metas from './pages/Metas.jsx'
 import Caixa from './pages/Caixa.jsx'
 import Comissoes from './pages/Comissoes.jsx'
+import Pacotes from './pages/Pacotes.jsx'
 import Galeria from './pages/Galeria.jsx'
 import Lembretes from './pages/Lembretes.jsx'
 import Config from './pages/Config.jsx'
@@ -31,6 +33,7 @@ export default function App() {
   if (!user)
     return (
       <>
+        <UpdatePrompt />
         <InstallGate />
         <Login />
       </>
@@ -38,6 +41,7 @@ export default function App() {
 
   return (
     <>
+      <UpdatePrompt />
       <InstallGate />
       <NotificationEngine />
       <Layout>
@@ -56,6 +60,7 @@ export default function App() {
         <Route path="/metas" element={<OwnerOnly><Metas /></OwnerOnly>} />
         <Route path="/caixa" element={<OwnerOnly><Caixa /></OwnerOnly>} />
         <Route path="/comissoes" element={<OwnerOnly><Comissoes /></OwnerOnly>} />
+        <Route path="/pacotes" element={<OwnerOnly><Pacotes /></OwnerOnly>} />
         <Route path="/lembretes" element={<OwnerOnly><Lembretes /></OwnerOnly>} />
         <Route path="/config" element={<OwnerOnly><Config /></OwnerOnly>} />
 

@@ -164,6 +164,12 @@ export const Icon = {
       <path d="M4 21h16" />
     </Svg>
   ),
+  upload: (p) => (
+    <Svg {...p}>
+      <path d="M12 21V9M7 14l5-5 5 5" />
+      <path d="M4 3h16" />
+    </Svg>
+  ),
   phone: (p) => (
     <Svg {...p}>
       <path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 5 5L20 12l1 4v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-3z" />

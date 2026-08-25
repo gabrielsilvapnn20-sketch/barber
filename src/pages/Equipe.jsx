@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useData, barberMetrics } from '../context/DataContext.jsx'
+import { useData, barberMetrics, monthKey } from '../context/DataContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Avatar, Modal, Field } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { brl, fmtDate, uid, colorFrom } from '../lib/utils.js'
+import { brl, fmtDate, fmtDateTime, uid, colorFrom, PAY_LABEL } from '../lib/utils.js'
 
 export default function Equipe() {
-  const { db, addTo, patch, remove, setDb, onlyBarbers, owner } = useData()
+  const { db, addTo, patch, remove, setDb, onlyBarbers, owner, payCommission } = useData()
   const toast = useToast()
   const [modal, setModal] = useState(null) // null | 'new' | user
   const [manageOff, setManageOff] = useState(null) // barber for day-off
+  const [settle, setSettle] = useState(null) // barber for commission settlement
 
   const team = [owner, ...onlyBarbers].filter(Boolean)
 
@@ -82,6 +83,14 @@ export default function Equipe() {
                 <ServiceReleaser barberId={b.id} db={db} setDb={setDb} />
               )}
 
+              <button
+                onClick={() => setSettle(b)}
+                className="mt-3 flex w-full items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+              >
+                <span className="flex items-center gap-1.5"><Icon.money size={15} /> Acerto de comissão</span>
+                <span aria-hidden>›</span>
+              </button>
+
               <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
                 <div className="flex flex-wrap gap-1.5">
                   {offs.length === 0 ? (
@@ -130,7 +139,160 @@ export default function Equipe() {
           toast.info('Folga removida.')
         }}
       />
+
+      <SettlementModal
+        barber={settle}
+        db={db}
+        onClose={() => setSettle(null)}
+        onPay={(payload) => {
+          payCommission({ barberId: settle.id, ...payload })
+          toast.success('Acerto registrado!')
+        }}
+        onRemove={(id) => {
+          remove('commissionPayments', id)
+          toast.info('Acerto removido.')
+        }}
+      />
     </div>
+  )
+}
+
+// Acerto de comissão: mostra o que o barbeiro ganhou no mês, o que já foi pago
+// e o saldo a pagar; permite registrar um repasse e ver o histórico.
+function SettlementModal({ barber, db, onClose, onPay, onRemove }) {
+  const [month, setMonth] = useState(monthKey(new Date()))
+  const [amount, setAmount] = useState('')
+  const [method, setMethod] = useState('pix')
+  const [note, setNote] = useState('')
+
+  const stats = useMemo(() => {
+    if (!barber) return { earned: 0, paid: 0 }
+    const earned = db.transactions
+      .filter((t) => t.barberId === barber.id && monthKey(new Date(t.date)) === month)
+      .reduce((s, t) => s + (t.barberShare || 0), 0)
+    const paid = (db.commissionPayments || [])
+      .filter((p) => p.barberId === barber.id && p.period === month)
+      .reduce((s, p) => s + (p.amount || 0), 0)
+    return { earned: +earned.toFixed(2), paid: +paid.toFixed(2) }
+  }, [barber, db.transactions, db.commissionPayments, month])
+
+  const balance = +(stats.earned - stats.paid).toFixed(2)
+
+  const history = useMemo(() => {
+    if (!barber) return []
+    return (db.commissionPayments || [])
+      .filter((p) => p.barberId === barber.id)
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+  }, [barber, db.commissionPayments])
+
+  useEffect(() => {
+    if (barber) {
+      setMonth(monthKey(new Date()))
+      setAmount('')
+      setMethod('pix')
+      setNote('')
+    }
+  }, [barber])
+
+  if (!barber) return null
+
+  const monthLabel = (mk) => {
+    const [y, m] = mk.split('-')
+    return new Date(+y, +m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  }
+  // Últimos 12 meses como opções
+  const monthOptions = []
+  {
+    const d = new Date()
+    for (let i = 0; i < 12; i++) {
+      monthOptions.push(monthKey(new Date(d.getFullYear(), d.getMonth() - i, 1)))
+    }
+  }
+
+  const register = () => {
+    const val = amount === '' ? balance : +amount
+    if (!(val > 0)) return
+    onPay({ amount: val, period: month, method, note })
+    setAmount('')
+    setNote('')
+  }
+
+  return (
+    <Modal open={!!barber} onClose={onClose} title={`Acerto — ${barber.name.split(' ')[0]}`}>
+      <div className="space-y-4">
+        <Field label="Mês de referência">
+          <select className="input" value={month} onChange={(e) => setMonth(e.target.value)}>
+            {monthOptions.map((mk) => (
+              <option key={mk} value={mk}>{monthLabel(mk)}</option>
+            ))}
+          </select>
+        </Field>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl bg-slate-50 py-2.5 dark:bg-slate-800/50">
+            <p className="text-sm font-bold">{brl(stats.earned)}</p>
+            <p className="text-[10px] uppercase text-slate-400">Comissão</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 py-2.5 dark:bg-slate-800/50">
+            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{brl(stats.paid)}</p>
+            <p className="text-[10px] uppercase text-slate-400">Já pago</p>
+          </div>
+          <div className={`rounded-xl py-2.5 ${balance > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
+            <p className={`text-sm font-bold ${balance > 0 ? 'text-amber-600 dark:text-amber-400' : ''}`}>{brl(balance)}</p>
+            <p className="text-[10px] uppercase text-slate-400">A pagar</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-100 p-3 dark:border-slate-800">
+          <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-400">Registrar pagamento</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Valor">
+              <input
+                className="input"
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value.replace(',', '.').replace(/[^\d.]/g, ''))}
+                placeholder={balance > 0 ? brl(balance) : '0,00'}
+              />
+            </Field>
+            <Field label="Forma">
+              <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
+                {Object.entries(PAY_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label="Observação (opcional)">
+            <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: adiantamento" />
+          </Field>
+          <button className="btn-primary mt-2 w-full" onClick={register}>
+            <Icon.check size={16} /> Registrar acerto
+          </button>
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-400">Histórico de acertos</p>
+          {history.length === 0 ? (
+            <p className="py-3 text-center text-sm text-slate-400">Nenhum acerto registrado.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {history.map((p) => (
+                <div key={p.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-800/50">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{brl(p.amount)} <span className="text-xs font-normal text-slate-400">· {PAY_LABEL[p.method] || p.method}</span></p>
+                    <p className="text-xs text-slate-400">
+                      {monthLabel(p.period)} · {fmtDateTime(new Date(p.date))}{p.note ? ` · ${p.note}` : ''}
+                    </p>
+                  </div>
+                  <button onClick={() => onRemove(p.id)} className="text-slate-400 hover:text-red-500"><Icon.trash size={15} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
   )
 }
 

@@ -26,6 +26,8 @@ function migrate(db) {
   if (!Array.isArray(db.packages)) db.packages = []
   // Movimentos de caixa (sangria/suprimento)
   if (!Array.isArray(db.cashMovements)) db.cashMovements = []
+  // Repasses/acertos de comissão pagos aos barbeiros
+  if (!Array.isArray(db.commissionPayments)) db.commissionPayments = []
   // Equipe: aplica o time atual (João Victor + Eduardo) uma vez por versão,
   // preservando o dono se já existir com o mesmo id.
   if (db.settings.teamVersion !== TEAM_VERSION) {
@@ -61,6 +63,30 @@ export function DataProvider({ children }) {
     dbRef.current = db
     localStorage.setItem(KEY, JSON.stringify(db))
   }, [db])
+
+  // Backup automático diário: guarda um instantâneo local (sem a galeria de
+  // fotos, para não pesar) e mantém os 7 últimos. Serve de rede de segurança
+  // caso os dados sejam apagados por engano.
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    if (db.settings?.lastSnapshotDay === today) return
+    try {
+      const { gallery, ...rest } = db
+      const snap = JSON.stringify({ at: new Date().toISOString(), db: rest })
+      localStorage.setItem(`barber.snapshot.${today}`, snap)
+      const days = Object.keys(localStorage)
+        .filter((k) => k.startsWith('barber.snapshot.'))
+        .sort()
+      while (days.length > 7) localStorage.removeItem(days.shift())
+    } catch (e) {
+      console.warn('Falha ao criar snapshot de backup:', e?.message)
+    }
+    setDb((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, lastSnapshotDay: today, lastSnapshotAt: new Date().toISOString() },
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [db.settings?.lastSnapshotDay])
 
   // Aplica dados vindos da nuvem, mesclando com o que existe localmente.
   const applyRemote = useCallback((remoteData) => {
@@ -451,6 +477,25 @@ export function DataProvider({ children }) {
     [db.transactions, blendedBarberShare, patch],
   )
 
+  // Registra um acerto/repasse de comissão pago a um barbeiro (referente a um
+  // período), para controle do que já foi quitado.
+  const payCommission = useCallback(
+    ({ barberId, amount, period, note, method = 'pix', date }) => {
+      const rec = {
+        id: uid('cp'),
+        barberId,
+        amount: +(+amount || 0).toFixed(2),
+        period: period || monthKey(new Date()),
+        note: note || '',
+        method,
+        date: date || new Date().toISOString(),
+      }
+      update('commissionPayments', (list) => [rec, ...list])
+      return rec
+    },
+    [update],
+  )
+
   const value = useMemo(
     () => ({
       db,
@@ -464,6 +509,7 @@ export function DataProvider({ children }) {
       redeemFromPackage,
       deleteTransaction,
       editSaleTransaction,
+      payCommission,
       syncStatus,
       resetData: () => {
         const seed = buildSeed()
@@ -484,6 +530,7 @@ export function DataProvider({ children }) {
           gallery: [],
           packages: [],
           cashMovements: [],
+          commissionPayments: [],
           clients: [],
           users: prev.users.map((u) => ({ ...u, lastVisit: undefined })),
         }))
@@ -506,7 +553,7 @@ export function DataProvider({ children }) {
           (p) => p.clientId === clientId && p.items.some((i) => i.qtyTotal - i.qtyUsed > 0),
         ),
     }),
-    [db, addTo, patch, remove, addTransaction, addSale, sellPackage, redeemFromPackage, deleteTransaction, editSaleTransaction, syncStatus],
+    [db, addTo, patch, remove, addTransaction, addSale, sellPackage, redeemFromPackage, deleteTransaction, editSaleTransaction, payCommission, syncStatus],
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

@@ -13,6 +13,17 @@ function download(filename, content, type) {
   URL.revokeObjectURL(url)
 }
 
+// Export any object as a downloadable JSON file (backup)
+export function exportJSON(filename, obj) {
+  download(filename, JSON.stringify(obj, null, 2), 'application/json')
+}
+
+// Abre o WhatsApp com um texto pronto para envio (compartilhar relatório).
+export function shareWhatsApp(text) {
+  const url = `https://wa.me/?text=${encodeURIComponent(text)}`
+  window.open(url, '_blank')
+}
+
 // Export an array of row-objects to CSV (Excel opens it directly)
 export function exportCSV(filename, rows) {
   if (!rows.length) return

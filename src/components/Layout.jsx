@@ -19,6 +19,7 @@ const ownerNav = [
   { to: '/metas', label: 'Metas', icon: Icon.target },
   { to: '/caixa', label: 'Caixa', icon: Icon.cash },
   { to: '/comissoes', label: 'Comissões', icon: Icon.tag },
+  { to: '/pacotes', label: 'Pacotes', icon: Icon.gift },
   { to: '/galeria', label: 'Portfólio', icon: Icon.camera },
   { to: '/lembretes', label: 'Lembretes', icon: Icon.bell },
   { to: '/config', label: 'Configurações', icon: Icon.settings },

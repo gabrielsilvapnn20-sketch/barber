@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useData } from '../context/DataContext.jsx'
 import { useTheme } from '../context/ThemeContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -7,6 +7,8 @@ import { usePWA } from '../context/PWAContext.jsx'
 import { PageHeader, Field } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
 import { showLocalNotification } from '../lib/notifications.js'
+import { exportJSON } from '../lib/reports.js'
+import { fmtDate } from '../lib/utils.js'
 
 export default function Config() {
   const { db, setDb, resetData, startFresh, patch, syncStatus } = useData()
@@ -24,6 +26,41 @@ export default function Config() {
   } = usePWA()
   const [shopName, setShopName] = useState(db.settings?.shopName || '')
   const [pin, setPin] = useState(user.pin || '')
+  const fileRef = useRef(null)
+
+  const downloadBackup = () => {
+    const stamp = new Date().toISOString().slice(0, 10)
+    exportJSON(`backup-barbearia-${stamp}.json`, db)
+    toast.success('Backup baixado.')
+  }
+
+  const onPickFile = () => fileRef.current?.click()
+
+  const restoreBackup = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result)
+        if (!data || typeof data !== 'object' || !Array.isArray(data.users)) {
+          return toast.error('Arquivo inválido — não parece um backup do app.')
+        }
+        if (
+          !confirm(
+            'Restaurar este backup? Os dados atuais deste dispositivo serão substituídos e sincronizados com a nuvem.',
+          )
+        )
+          return
+        setDb(() => data)
+        toast.success('Backup restaurado com sucesso.')
+      } catch {
+        toast.error('Não foi possível ler o arquivo.')
+      }
+    }
+    reader.readAsText(file)
+  }
 
   const saveShop = () => {
     setDb((prev) => ({ ...prev, settings: { ...prev.settings, shopName } }))
@@ -151,6 +188,34 @@ export default function Config() {
                   ? 'Conectando à nuvem…'
                   : 'Sincronização em nuvem não configurada.'}
           </p>
+        </div>
+
+        <div className="card lg:col-span-2">
+          <h3 className="mb-1 font-bold">Backup dos dados</h3>
+          <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">
+            Baixe uma cópia de segurança de todos os dados (clientes, lançamentos,
+            comissões, caixa…) em um arquivo. Guarde em local seguro e restaure quando precisar.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-primary" onClick={downloadBackup}>
+              <Icon.download size={18} /> Baixar backup
+            </button>
+            <button className="btn-ghost" onClick={onPickFile}>
+              <Icon.upload size={18} /> Restaurar de arquivo
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={restoreBackup}
+            />
+          </div>
+          {db.settings?.lastSnapshotAt && (
+            <p className="mt-3 text-xs text-slate-400">
+              Último backup automático interno: {fmtDate(new Date(db.settings.lastSnapshotAt))}.
+            </p>
+          )}
         </div>
 
         <div className="card lg:col-span-2">

@@ -10,8 +10,15 @@ import { AuthProvider } from './context/AuthContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
 import { PWAProvider } from './context/PWAContext.jsx'
 
-// Registra o Service Worker (precache offline + notificações). autoUpdate.
-registerSW({ immediate: true })
+// Registra o Service Worker (precache offline + notificações) e avisa quando
+// há uma nova versão publicada (o usuário toca em "Atualizar").
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    window.dispatchEvent(new CustomEvent('pwa:need-refresh'))
+  },
+})
+window.__pwaUpdate = () => updateSW(true)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

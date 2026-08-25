@@ -143,6 +143,7 @@ export function buildSeed() {
     gallery,
     packages,
     cashMovements: [],
+    commissionPayments: [],
     settings: {
       shopName: 'João Victor Barbershop',
       productDefaultPct: 20,

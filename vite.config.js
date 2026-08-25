@@ -11,7 +11,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
-      registerType: 'autoUpdate',
+      registerType: 'prompt', // avisa o usuário quando há nova versão
       injectRegister: null, // we register manually in main.jsx (need the registration object)
       includeAssets: ['logo.svg', 'apple-touch-icon.png', 'robots.txt'],
       injectManifest: {

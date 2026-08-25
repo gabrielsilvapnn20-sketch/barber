@@ -8,7 +8,8 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { clientsClaim } from 'workbox-core'
 
-self.skipWaiting()
+// Não ativa sozinho: espera o usuário tocar em "Atualizar" (aviso de nova
+// versão). O app envia a mensagem SKIP_WAITING quando o usuário confirma.
 clientsClaim()
 
 cleanupOutdatedCaches()
@@ -35,9 +36,13 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options))
 })
 
-// ---- Notificações locais disparadas pela página (sem servidor) ----
+// ---- Notificações locais + comando de atualização ----
 self.addEventListener('message', (event) => {
   const msg = event.data || {}
+  if (msg.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+    return
+  }
   if (msg.type === 'SHOW_NOTIFICATION') {
     const { title, ...options } = msg.payload || {}
     self.registration.showNotification(title || 'Barbearia', {
