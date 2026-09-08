@@ -17,6 +17,7 @@ export const ARRAY_KEYS = [
   'packages',
   'cashMovements',
   'commissionPayments',
+  'convenios',
 ]
 
 // União de listas por id — itens de "incoming" vencem em caso de mesmo id;

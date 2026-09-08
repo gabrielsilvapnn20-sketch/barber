@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { PageHeader, Avatar, Modal, Field, EmptyState } from '../components/ui.jsx'
 import Icon from '../components/Icons.jsx'
-import { fmtDate, brl, pkgIsExpired } from '../lib/utils.js'
+import { fmtDate, brl, pkgIsExpired, maskCpf, isValidCpf } from '../lib/utils.js'
 
 export default function Clientes() {
   const { db, addTo, patch, remove, activePackagesForClient, onlyBarbers, owner } = useData()
@@ -99,6 +99,11 @@ export default function Clientes() {
                   {isOwner && barber && (
                     <span className="chip"><Avatar name={barber.name} color={barber.color} size={14} /> {barber.name.split(' ')[0]}</span>
                   )}
+                  {c.convenioId && (
+                    <span className="chip bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                      <Icon.tag size={12} /> {db.convenios?.find((v) => v.id === c.convenioId)?.name || 'Convênio'}
+                    </span>
+                  )}
                 </div>
                 {c.preferences && (
                   <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-brand-500/10 p-2 text-xs text-brand-700 dark:text-brand-300">
@@ -136,6 +141,7 @@ export default function Clientes() {
         open={!!modal}
         client={modal === 'new' ? null : modal}
         barbers={barbers}
+        convenios={(db.convenios || []).filter((c) => c.active !== false)}
         isOwner={isOwner}
         onClose={() => setModal(null)}
         onSave={save}
@@ -162,14 +168,27 @@ function Mini({ label, value }) {
   )
 }
 
-function ClientModal({ open, client, onClose, onSave, onDelete, barbers, isOwner }) {
-  const [form, setForm] = useState({ name: '', phone: '', birthday: '', notes: '', preferences: '', barberId: '' })
+function ClientModal({ open, client, onClose, onSave, onDelete, barbers, convenios = [], isOwner }) {
+  const [form, setForm] = useState({ name: '', phone: '', birthday: '', notes: '', preferences: '', barberId: '', convenioId: '', cpf: '' })
+  const [err, setErr] = useState('')
   useEffect(() => {
     if (!open) return
-    if (client) setForm({ name: client.name, phone: client.phone || '', birthday: client.birthday || '', notes: client.notes || '', preferences: client.preferences || '', barberId: client.barberId || '' })
-    else setForm({ name: '', phone: '', birthday: '', notes: '', preferences: '', barberId: '' })
+    setErr('')
+    if (client) setForm({ name: client.name, phone: client.phone || '', birthday: client.birthday || '', notes: client.notes || '', preferences: client.preferences || '', barberId: client.barberId || '', convenioId: client.convenioId || '', cpf: client.cpf || '' })
+    else setForm({ name: '', phone: '', birthday: '', notes: '', preferences: '', barberId: '', convenioId: '', cpf: '' })
   }, [client, open])
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  const submit = () => {
+    setErr('')
+    if (!form.name.trim()) return setErr('Informe o nome do cliente.')
+    if (form.convenioId) {
+      if (!form.cpf.trim()) return setErr('Para clientes de convênio, o CPF é obrigatório.')
+      if (!isValidCpf(form.cpf)) return setErr('CPF inválido — confira os números.')
+    }
+    // Sem convênio: não guarda CPF órfão? Mantemos o que foi digitado.
+    onSave(form)
+  }
 
   return (
     <Modal
@@ -180,7 +199,7 @@ function ClientModal({ open, client, onClose, onSave, onDelete, barbers, isOwner
         <>
           {onDelete && <button className="btn-danger mr-auto" onClick={onDelete}><Icon.trash size={16} /></button>}
           <button className="btn-ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn-primary" onClick={() => form.name && onSave(form)}>Salvar</button>
+          <button className="btn-primary" onClick={submit}>Salvar</button>
         </>
       }
     >
@@ -198,6 +217,36 @@ function ClientModal({ open, client, onClose, onSave, onDelete, barbers, isOwner
             </select>
           </Field>
         )}
+        <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+          <Field label="Convênio (empresa que paga)">
+            <select
+              className="input"
+              value={form.convenioId}
+              onChange={(e) => set('convenioId', e.target.value)}
+              disabled={convenios.length === 0}
+            >
+              <option value="">Sem convênio (paga direto)</option>
+              {convenios.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </Field>
+          {convenios.length === 0 && (
+            <p className="mt-1 text-xs text-slate-400">Cadastre empresas em <b>Convênios</b> para vincular clientes.</p>
+          )}
+          {form.convenioId && (
+            <div className="mt-3">
+              <Field label="CPF (obrigatório para convênio)">
+                <input
+                  className="input"
+                  inputMode="numeric"
+                  value={form.cpf}
+                  onChange={(e) => set('cpf', maskCpf(e.target.value))}
+                  placeholder="000.000.000-00"
+                />
+              </Field>
+            </div>
+          )}
+        </div>
+        {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">{err}</p>}
         <Field label="Preferências de corte / estilo">
           <textarea className="input" rows={2} value={form.preferences} onChange={(e) => set('preferences', e.target.value)} placeholder="Ex: máquina 2 nas laterais, tesoura em cima, risco à direita, barba na navalha" />
         </Field>

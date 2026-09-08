@@ -29,6 +29,7 @@ export const PAY_LABEL = {
   debito: 'Débito',
   credito: 'Crédito',
   pacote: 'Pacote',
+  convenio: 'Convênio',
   misto: 'Misto',
 }
 export const paymentLabelOf = (t) => {
@@ -73,6 +74,42 @@ export const isSameMonth = (a, b = new Date()) => {
 export const monthKey = (d = new Date()) => {
   const x = new Date(d)
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`
+}
+
+// Mês anterior a uma referência, no formato 'YYYY-MM'
+export const prevMonthKey = (d = new Date()) => {
+  const x = new Date(d)
+  return monthKey(new Date(x.getFullYear(), x.getMonth() - 1, 1))
+}
+
+// Rótulo legível de um 'YYYY-MM' (ex.: "setembro de 2026")
+export const monthKeyLabel = (mk) => {
+  const [y, m] = String(mk).split('-')
+  return new Date(+y, +m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+}
+
+// ---- CPF ----
+export const maskCpf = (v) => {
+  const d = String(v || '').replace(/\D/g, '').slice(0, 11)
+  return d
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+// Validação real de CPF (dígitos verificadores)
+export const isValidCpf = (v) => {
+  const c = String(v || '').replace(/\D/g, '')
+  if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += +c[i] * (10 - i)
+  let d1 = (sum * 10) % 11
+  if (d1 === 10) d1 = 0
+  if (d1 !== +c[9]) return false
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += +c[i] * (11 - i)
+  let d2 = (sum * 10) % 11
+  if (d2 === 10) d2 = 0
+  return d2 === +c[10]
 }
 
 export const fmtDate = (d) =>

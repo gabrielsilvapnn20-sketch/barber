@@ -11,6 +11,7 @@ const PAY_METHODS = [
   { v: 'dinheiro', l: 'Dinheiro' },
   { v: 'debito', l: 'Cartão débito' },
   { v: 'credito', l: 'Cartão crédito' },
+  { v: 'convenio', l: 'Convênio (empresa)' },
 ]
 
 const emptyPay = () => ({ split: false, method: 'pix', lines: [{ method: 'pix', amount: '' }, { method: 'dinheiro', amount: '' }] })

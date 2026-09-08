@@ -23,7 +23,7 @@ export function buildSeed() {
 
   const clients = [
     { id: 'cli_1', name: 'João Pedro', phone: '(11) 98888-1111', birthday: '1990-08-12', barberId: 'usr_owner', notes: 'Gosta de degradê baixo' },
-    { id: 'cli_2', name: 'Marcos Vinícius', phone: '(11) 98888-2222', birthday: '1985-03-25', barberId: 'usr_edu', notes: '' },
+    { id: 'cli_2', name: 'Marcos Vinícius', phone: '(11) 98888-2222', birthday: '1985-03-25', barberId: 'usr_edu', notes: '', convenioId: 'conv_pontal', cpf: '111.444.777-35' },
     { id: 'cli_3', name: 'Felipe Andrade', phone: '(11) 98888-3333', birthday: '1998-11-05', barberId: 'usr_edu', notes: 'Alérgico a certos produtos' },
     { id: 'cli_4', name: 'Lucas Ferreira', phone: '(11) 98888-4444', birthday: '1992-08-08', barberId: 'usr_owner', notes: '' },
     { id: 'cli_5', name: 'Gabriel Rocha', phone: '(11) 98888-5555', birthday: '2000-01-30', barberId: 'usr_edu', notes: 'Sempre barba + corte' },
@@ -58,8 +58,8 @@ export function buildSeed() {
     tx('usr_owner', 'srv_cabelo', 'cli_1', daysAgo(0, 9, 30)),
     tx('usr_owner', 'srv_barba', 'cli_1', daysAgo(0, 9, 45)),
     tx('usr_owner', 'srv_cabelo_barba', 'cli_4', daysAgo(0, 11, 0)),
-    tx('usr_edu', 'srv_cabelo', 'cli_2', daysAgo(0, 10, 15)),
-    tx('usr_edu', 'srv_sobr', 'cli_2', daysAgo(0, 10, 30)),
+    tx('usr_edu', 'srv_cabelo', 'cli_2', daysAgo(0, 10, 15), 'convenio'),
+    tx('usr_edu', 'srv_sobr', 'cli_2', daysAgo(0, 10, 30), 'convenio'),
     tx('usr_edu', 'srv_corte_alis', 'cli_3', daysAgo(0, 13, 0)),
     tx('usr_edu', 'srv_sobr', 'cli_3', daysAgo(0, 13, 20)),
     // Yesterday
@@ -70,8 +70,8 @@ export function buildSeed() {
     // Earlier this month
     tx('usr_owner', 'srv_cabelo_barba', 'cli_1', daysAgo(3, 11)),
     tx('usr_owner', 'srv_cabelo', 'cli_4', daysAgo(4, 15)),
-    tx('usr_edu', 'srv_alis', 'cli_2', daysAgo(5, 10)),
-    tx('usr_edu', 'srv_cabelo', 'cli_2', daysAgo(6, 12)),
+    tx('usr_edu', 'srv_alis', 'cli_2', daysAgo(5, 10), 'convenio'),
+    tx('usr_edu', 'srv_cabelo', 'cli_2', daysAgo(6, 12), 'convenio'),
     tx('usr_edu', 'srv_cabelo', 'cli_3', daysAgo(7, 9)),
     tx('usr_edu', 'srv_barba', 'cli_3', daysAgo(8, 17)),
     tx('usr_owner', 'srv_corte_alis_barba', 'cli_1', daysAgo(9, 11)),
@@ -128,11 +128,25 @@ export function buildSeed() {
     },
   ]
 
+  const convenios = [
+    {
+      id: 'conv_pontal',
+      name: 'Pontal Drogas',
+      contact: '(11) 3333-4444',
+      closingDay: 5,
+      active: true,
+      notes: 'Convênio dos funcionários da farmácia.',
+      lastClosedCycle: null,
+      createdAt: daysAgo(20, 10),
+    },
+  ]
+
   return {
     users,
     categories,
     services,
     clients,
+    convenios,
     transactions,
     appointments,
     queue,

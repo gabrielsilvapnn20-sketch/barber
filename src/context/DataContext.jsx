@@ -28,6 +28,8 @@ function migrate(db) {
   if (!Array.isArray(db.cashMovements)) db.cashMovements = []
   // Repasses/acertos de comissão pagos aos barbeiros
   if (!Array.isArray(db.commissionPayments)) db.commissionPayments = []
+  // Convênios (empresas que pagam pelos atendimentos dos funcionários)
+  if (!Array.isArray(db.convenios)) db.convenios = []
   // Equipe: aplica o time atual (João Victor + Eduardo) uma vez por versão,
   // preservando o dono se já existir com o mesmo id.
   if (db.settings.teamVersion !== TEAM_VERSION) {
@@ -104,6 +106,7 @@ export function DataProvider({ children }) {
     let cancelled = false
     let unsub = () => {}
     let pollId = null
+    let onFocus = null
     ;(async () => {
       try {
         const remote = await fetchRemote()
@@ -133,9 +136,8 @@ export function DataProvider({ children }) {
         // Tempo real
         unsub = subscribeRemote((remoteData) => applyRemote(remoteData))
 
-        // Fallback: verifica a nuvem a cada 12s (caso o tempo real seja
-        // bloqueado por alguma rede de celular).
-        pollId = setInterval(async () => {
+        // Busca imediata da nuvem (usada no polling e ao reabrir o app)
+        const pull = async () => {
           try {
             const r = await fetchRemote()
             if (r) applyRemote(r)
@@ -143,7 +145,17 @@ export function DataProvider({ children }) {
           } catch {
             setSyncStatus('error')
           }
-        }, 12000)
+        }
+
+        // Fallback: verifica a nuvem a cada 5s (caso o tempo real seja
+        // bloqueado por alguma rede de celular).
+        pollId = setInterval(pull, 5000)
+
+        // Ao reabrir/voltar o foco no app, sincroniza na hora (sem esperar o
+        // próximo ciclo) — deixa a troca dono⇄barbeiro quase instantânea.
+        onFocus = () => { if (!document.hidden) pull() }
+        window.addEventListener('focus', onFocus)
+        document.addEventListener('visibilitychange', onFocus)
       } catch (e) {
         console.warn('Sincronização indisponível (rodando offline):', e?.message)
         setSyncStatus('error')
@@ -153,6 +165,10 @@ export function DataProvider({ children }) {
       cancelled = true
       unsub()
       if (pollId) clearInterval(pollId)
+      if (onFocus) {
+        window.removeEventListener('focus', onFocus)
+        document.removeEventListener('visibilitychange', onFocus)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [applyRemote])
@@ -180,7 +196,7 @@ export function DataProvider({ children }) {
         console.warn('Falha ao enviar para a nuvem:', e?.message)
         setSyncStatus('error')
       }
-    }, 700)
+    }, 350)
     return () => clearTimeout(t)
   }, [db])
 
@@ -548,6 +564,7 @@ export function DataProvider({ children }) {
       serviceById: (id) => db.services.find((s) => s.id === id),
       categoryById: (id) => db.categories.find((c) => c.id === id),
       clientById: (id) => db.clients.find((c) => c.id === id),
+      convenioById: (id) => (db.convenios || []).find((c) => c.id === id),
       // Pacotes ativos (com saldo restante) de um cliente
       activePackagesForClient: (clientId) =>
         (db.packages || []).filter(
